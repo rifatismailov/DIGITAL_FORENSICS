@@ -345,15 +345,6 @@ Host:     Mutex: Local\WinSvcHostV2
 
 ---
 
-## 🧹 Cleanup
-
-```bash
-sudo docker compose -f docker-compose.sc06.yml down
-rm /home/analyst/scenario/sc06.pcap
-rm /home/analyst/scenario/INC-2024-032701_report.txt
-```
-
----
 
 *Forensics |  Fake Invoice (Emotet-style XLSM Dropper)| EDUCATIONAL USE ONLY | Rifat Ismailov*
 
