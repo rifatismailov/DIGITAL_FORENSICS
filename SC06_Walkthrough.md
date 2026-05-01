@@ -280,7 +280,6 @@ cat /var/log/web/access.log
 ### Крок 4.2 — Скласти звіт
 
 ```bash
-exit   # вийди з контейнера
 nano /home/student1/INC-2024-032701_report.txt
 ```
 
