@@ -32,9 +32,11 @@ Action required: Investigate and contain
 
 ### Крок 1.1 — Відкрити веб-поштовий інтерфейс
 
-Відкрий браузер і перейди на `http://localhost:8086`. Ти побачиш папку «Вхідні» з листом позначеним як **⚠ ПІДОЗРІЛИЙ**.
+Відкрий браузер і перейди на `http://localhost:8086` якщо ви знаходитесь в самій машині. Ти побачиш папку «Вхідні» з листом позначеним як **⚠ ПІДОЗРІЛИЙ**.
 
-[[VISUAL: Скріншот — вхідні повідомлення, червоний badge навпроти листа від billing@ukr-accounting-service.net]]
+Скріншот — вхідні повідомлення, червоний badge навпроти листа від billing@ukr-accounting-service.net
+![Скріншот — вхідні повідомлення, червоний badge навпроти листа від billing@ukr-accounting-service.net](image/image_1.png)
+
 
 ### Крок 1.2 — Переглянути деталі листа
 
@@ -49,7 +51,8 @@ Action required: Investigate and contain
 | DMARC | `FAIL (p=QUARANTINE)` |
 | Вкладення | `Рахунок_фактура_INV-2024-0847.xlsm` |
 
-[[VISUAL: Скріншот — панель IOC з червоними прапорцями SPF FAIL, DMARC FAIL]]
+ Скріншот — панель IOC з червоними прапорцями SPF FAIL, DMARC FAIL
+![Скріншот — панель IOC з червоними прапорцями SPF FAIL, DMARC FAIL](image/image_2.png)
 
 ### Крок 1.3 — Raw Headers
 
@@ -60,9 +63,11 @@ Authentication-Results: mx.techfrontier.com.ua;
        spf=fail (193.201.22.41 is not authorized...)
        dmarc=fail (p=QUARANTINE; pct=100)
 ```
-
+![Скріншот — Raw Headers](image/image_3.png)
 **🔴 Висновок:** IP `193.201.22.41` не авторизований для домену `ukr-accounting-service.net`.
 
+Скріншот — вмист вовідомленя з вкладеним документом
+![Скріншот — Raw Headers](image/image_4.png)
 ---
 
 ## Фаза 2 — Аналіз мережевого трафіку (PCAP)
@@ -70,9 +75,11 @@ Authentication-Results: mx.techfrontier.com.ua;
 ### Крок 2.1 — Підготовка PCAP
 
 ```bash
-# Скопіювати PCAP з контейнера
-sudo docker cp forensics_sc06_invoice:/root/analysis/traffic.pcap /home/analyst/scenario/sc06.pcap
+# Перевірка PCAP файлу
+ls -lh /home/analyst/scenario/sc06.pcap
+-rwxr-x--- 1 analyst lab_students 128K Apr 30 23:02 /home/analyst/scenario/sc06.pcap
 ```
+![Скріншот — Перевірка PCAP файлу](image/image_5.png)
 
 ### Крок 2.2 — Знайти C2 DNS запит
 
@@ -85,7 +92,9 @@ tcpdump -r /home/analyst/scenario/sc06.pcap port 53 | grep -i "cdn-updates"
 ```
 11:32:30.000000 IP 192.168.5.88.52841 > 192.168.5.1.domain: 21016+ A? cdn-updates-service.com. (41)
 ```
+![Скріншот — Знайти C2 DNS запит](image/image_6.png)
 
+### Крок 2.2 — Знайти C2 DNS запит
 Знайти відповідь з IP (використай Transaction ID з попереднього рядка, наприклад `21016`):
 
 ```bash
@@ -100,7 +109,7 @@ tcpdump -r /home/analyst/scenario/sc06.pcap -n port 53 | grep -A1 "cdn-updates"
 ```
 
 [[VISUAL: Скріншот — два рядки DNS: запит та відповідь з IP 185.156.72.11]]
-
+![Скріншот — два рядки DNS: запит та відповідь з IP 185.156.72.11](image/image_7.png)
 **🔴 IOC:** `cdn-updates-service.com` → `185.156.72.11`
 
 ### Крок 2.3 — Переглянути весь C2 трафік
