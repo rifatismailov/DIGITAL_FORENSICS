@@ -138,28 +138,31 @@ Received: from mx.techfrontier.com.ua               ← 4. Отримувач
 grep -E "^(From|To|Reply-To|Return-Path|Date|Subject|Message-ID|X-Originating-IP|X-Spam-Score|X-Spam-Flag|DKIM-Signature):" \
     ~/scenario/emails/06_malware_invoice.eml
 ```
-
+![Витягнути всі ключові заголовки](image/email/image_1.png)
 **Received chain (маршрут листа):**
 ```bash
 grep "^Received:" ~/scenario/emails/06_malware_invoice.eml
 ```
-
+![маршрут листа](image/email/image_2.png)
 **Декодувати Subject:**
 ```bash
 grep "^Subject:" ~/scenario/emails/06_malware_invoice.eml \
   | grep -oP '(?<=\?B\?)[^?]+' | base64 -d 2>/dev/null && echo
 ```
+![Декодувати Subject](image/email/image_3.png)
 
 **Всі URL у листі:**
 ```bash
 grep -oE 'https?://[^"<> ]+' ~/scenario/emails/06_malware_invoice.eml | sort -u
 ```
+![Всі URL у лист](image/email/image_4.png)
 
 **Tracking pixel:**
 ```bash
 grep -i "width.*[\"']1[\"'].*height\|height.*[\"']1[\"'].*width\|pixel\|track" \
     ~/scenario/emails/06_malware_invoice.eml
 ```
+
 
 **Приховані посилання (href ≠ текст):**
 ```bash
@@ -171,12 +174,15 @@ cat ~/scenario/emails/06_malware_invoice.eml | tr '\n' ' ' | \
 ```bash
 grep "X-Attachment-SHA256" ~/scenario/emails/06_malware_invoice.eml
 ```
+![SHA256 вкладення](image/email/image_7.png)
 
 **Декодувати base64 тіло вкладення:**
 ```bash
 grep -A100 "X-Attachment-Note" ~/scenario/emails/06_malware_invoice.eml | \
   tail -n +3 | grep -v "^--" | base64 -d 2>/dev/null
 ```
+
+![Декодувати base64 тіло вкладення](image/email/image_8.png)
 
 ### 3.3 Офлайн — Python скрипт
 
@@ -266,6 +272,8 @@ for u in sorted(set(urls)):
 
 PYEOF
 ```
+![Офлайн — Python скрипт](image/email/image_9.png)
+
 
 ### 3.4 Офлайн — emlAnalyzer (Python CLI)
 
@@ -279,7 +287,7 @@ eml_analyzer -i ~/scenario/emails/06_malware_invoice.eml
 # Витягнути вкладення
 eml_analyzer -i ~/scenario/emails/06_malware_invoice.eml --extract-attachment
 ```
-
+![Офлайн — emlAnalyzer](image/email/image_10.png)
 ---
 
 ## Частина 4 — Завдання для звіту
@@ -334,4 +342,4 @@ eml_analyzer -i ~/scenario/emails/06_malware_invoice.eml --extract-attachment
 
 ---
 
-*ITS/КСЗІ — Email Forensics Lab | Крок 1.4 | EDUCATIONAL USE ONLY | SET University*
+*Forensics |  Fake Invoice (Emotet-style XLSM Dropper)| EDUCATIONAL USE ONLY | Rifat Ismailov*
