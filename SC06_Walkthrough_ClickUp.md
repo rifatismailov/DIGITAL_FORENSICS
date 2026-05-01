@@ -1,7 +1,10 @@
-# Розбір лабораторної роботи — Сценарій 06: Malware Delivery via Fake Invoice
+# Розбір лабораторної роботи — Сценарій: Malware Delivery via Fake Invoice
 
-**Модуль:** Email Forensics | **Сценарій:** 06 — Fake Invoice (Emotet-style XLSM Dropper)
-**Формат:** Self-Paced | **Мова:** Українська | **Тип:** Student Solution Guide
+**Назва лабораторної:** Email Forensics — Доставка шкідливого ПЗ через підроблений рахунок
+**Модуль:** Аналіз електронної пошти / Аналіз інцидентів
+**Сценарій:** Fake Invoice (Emotet-style XLSM Dropper)
+**Формат:** Self-Paced
+**Версія документу:** 1.0
 
 ---
 
@@ -352,4 +355,5 @@ rm /home/analyst/scenario/INC-2024-032701_report.txt
 
 ---
 
-*ITS/КСЗІ — Email Forensics Lab | Сценарій 06 | EDUCATIONAL USE ONLY | SET University*
+*Forensics |  Fake Invoice (Emotet-style XLSM Dropper)| EDUCATIONAL USE ONLY | Rifat Ismailov*
+
