@@ -64,7 +64,7 @@ Authentication-Results: mx.techfrontier.com.ua;
        dmarc=fail (p=QUARANTINE; pct=100)
 ```
 ![Скріншот — Raw Headers](image/image_3.png)
-** Висновок:** IP `193.201.22.41` не авторизований для домену `ukr-accounting-service.net`.
+**Висновок:** IP `193.201.22.41` не авторизований для домену `ukr-accounting-service.net`.
 
 ![Скріншот — Raw Headers](image/image_4.png)
 ---
@@ -94,7 +94,6 @@ tcpdump -r /home/analyst/scenario/sc06.pcap port 53 | grep -i "cdn-updates"
 ```
 ![Скріншот — Знайти C2 DNS запит](image/image_6.png)
 
-### Крок 2.2 — Знайти C2 DNS запит
 Знайти відповідь з IP (використай Transaction ID з попереднього рядка, наприклад `21016`):
 
 ```bash
@@ -111,7 +110,7 @@ tcpdump -r /home/analyst/scenario/sc06.pcap -n port 53 | grep -A1 "cdn-updates"
 ![Скріншот — два рядки DNS: запит та відповідь з IP 185.156.72.11](image/image_7.png)
 Скріншот — два рядки DNS: запит та відповідь з IP 185.156.72.11
 
-** IOC:** `cdn-updates-service.com` → `185.156.72.11`
+**IOC:** `cdn-updates-service.com` → `185.156.72.11`
 
 ### Крок 2.3 — Переглянути весь C2 трафік
 
@@ -171,7 +170,7 @@ User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 10.0; Trident/7.0)
 tcpdump -r /home/analyst/scenario/sc06.pcap -A host 185.156.72.11 | grep "POST /cdn/check"
 ```
 ![Скріншот — Підрахувати beacon](image/image_12.png)
-** Висновок Фази 2:** 8 C2 beacon (~120с інтервал) до `185.156.72.11:8080`. Спроба ексфільтрації — HTTP 403.
+**Висновок Фази 2:** 8 C2 beacon (~120с інтервал) до `185.156.72.11:8080`. Спроба ексфільтрації — HTTP 403.
 
 ---
 
@@ -253,7 +252,7 @@ cat /var/log/web/access.log
 
 [[VISUAL: Скріншот access.log — IOC рядки виділені серед легітимних запитів]]
 
-** Висновок Фази 3:** Підтверджено повний ланцюг: email → XLSM → cmd → PowerShell → DLL → Registry Run → Mutex → beacon ×8 → exfil (blocked).
+**Висновок Фази 3:** Підтверджено повний ланцюг: email → XLSM → cmd → PowerShell → DLL → Registry Run → Mutex → beacon ×8 → exfil (blocked).
 
 ---
 
