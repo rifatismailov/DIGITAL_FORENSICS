@@ -34,9 +34,9 @@ Action required: Investigate and contain
 
 Відкрий браузер і перейди на `http://localhost:8086` якщо ви знаходитесь в самій машині. Ти побачиш папку «Вхідні» з листом позначеним як **⚠ ПІДОЗРІЛИЙ**.
 
-Скріншот — вхідні повідомлення, червоний badge навпроти листа від billing@ukr-accounting-service.net
-![Скріншот — вхідні повідомлення, червоний badge навпроти листа від billing@ukr-accounting-service.net](image/image_1.png)
 
+![Скріншот — вхідні повідомлення, червоний badge навпроти листа від billing@ukr-accounting-service.net](image/image_1.png)
+Скріншот — вхідні повідомлення, червоний badge навпроти листа від billing@ukr-accounting-service.net
 
 ### Крок 1.2 — Переглянути деталі листа
 
@@ -51,8 +51,8 @@ Action required: Investigate and contain
 | DMARC | `FAIL (p=QUARANTINE)` |
 | Вкладення | `Рахунок_фактура_INV-2024-0847.xlsm` |
 
- Скріншот — панель IOC з червоними прапорцями SPF FAIL, DMARC FAIL
 ![Скріншот — панель IOC з червоними прапорцями SPF FAIL, DMARC FAIL](image/image_2.png)
+ Скріншот — панель IOC з червоними прапорцями SPF FAIL, DMARC FAIL
 
 ### Крок 1.3 — Raw Headers
 
@@ -66,9 +66,9 @@ Authentication-Results: mx.techfrontier.com.ua;
 ![Скріншот — Raw Headers](image/image_3.png)
 **🔴 Висновок:** IP `193.201.22.41` не авторизований для домену `ukr-accounting-service.net`.
 
-Скріншот — вмист вовідомленя з вкладеним документом
 ![Скріншот — Raw Headers](image/image_4.png)
 ---
+Скріншот — вмист вовідомленя з вкладеним документом
 
 ## Фаза 2 — Аналіз мережевого трафіку (PCAP)
 
@@ -108,8 +108,9 @@ tcpdump -r /home/analyst/scenario/sc06.pcap -n port 53 | grep -A1 "cdn-updates"
 11:32:30.039999 IP 192.168.5.1.53 > 192.168.5.88.52841: 21016 1/0/0 A 185.156.72.11 (57)
 ```
 
-Скріншот — два рядки DNS: запит та відповідь з IP 185.156.72.11
 ![Скріншот — два рядки DNS: запит та відповідь з IP 185.156.72.11](image/image_7.png)
+Скріншот — два рядки DNS: запит та відповідь з IP 185.156.72.11
+
 **🔴 IOC:** `cdn-updates-service.com` → `185.156.72.11`
 
 ### Крок 2.3 — Переглянути весь C2 трафік
