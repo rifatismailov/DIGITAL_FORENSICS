@@ -254,8 +254,9 @@ cat /var/log/web/access.log
 # Exfil — заблоковано:
 192.168.5.88 [...] "POST http://cdn-updates-service.com:8080/cdn/telemetry/upload" 403
 ```
-
-[[VISUAL: Скріншот access.log — IOC рядки виділені серед легітимних запитів]]
+![Скріншот — access.log](image/image_16.png)
+![Скріншот — access.log](image/image_17.png)
+[[Скріншот access.log — IOC рядки виділені серед легітимних запитів]]
 
 **Висновок Фази 3:** Підтверджено повний ланцюг: email → XLSM → cmd → PowerShell → DLL → Registry Run → Mutex → beacon ×8 → exfil (blocked).
 
