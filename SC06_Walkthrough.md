@@ -327,7 +327,6 @@ Host:     Mutex: Local\WinSvcHostV2
 # Ctrl+O → Enter → Ctrl+X
 ```
 
-[[VISUAL: Скріншот заповненого звіту INC-2024-032701_report.txt]]
 
 ---
 
