@@ -281,7 +281,7 @@ cat /var/log/web/access.log
 
 ```bash
 exit   # вийди з контейнера
-nano /home/analyst/scenario/INC-2024-032701_report.txt
+nano /home/student1/INC-2024-032701_report.txt
 ```
 
 **Executive Summary:**
