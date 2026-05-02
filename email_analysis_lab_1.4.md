@@ -22,7 +22,7 @@
 
 ## Частина 1 — Структура .eml файлу
 
-Перед тим як використовувати інструменти — розберись що таке `.eml`.
+Перед тим як використовувати інструменти — розберись, що таке `.eml`.
 
 ### 1.1 Анатомія email повідомлення
 
@@ -98,7 +98,7 @@ Received: from mx.techfrontier.com.ua               ← 4. Отримувач
 
 | Елемент | Ознака атаки |
 |---|---|
-| `<a href="X">Y</a>` де X ≠ Y | Прихована URL |
+| `<a href="X">Y</a>` де X ≠ Y | Прихований URL |
 | `<img width="1" height="1">` | Tracking pixel |
 | `активуйте вміст` / `enable content` | Соціальна інженерія для макросів |
 | Urgency: `залишилось 4 дні` | Тиск на жертву |
@@ -139,11 +139,13 @@ grep -E "^(From|To|Reply-To|Return-Path|Date|Subject|Message-ID|X-Originating-IP
     ~/scenario/emails/06_malware_invoice.eml
 ```
 ![Витягнути всі ключові заголовки](image/email/image_1.png)
+
 **Received chain (маршрут листа):**
 ```bash
 grep "^Received:" ~/scenario/emails/06_malware_invoice.eml
 ```
 ![маршрут листа](image/email/image_2.png)
+
 **Декодувати Subject:**
 ```bash
 grep "^Subject:" ~/scenario/emails/06_malware_invoice.eml \
@@ -155,14 +157,13 @@ grep "^Subject:" ~/scenario/emails/06_malware_invoice.eml \
 ```bash
 grep -oE 'https?://[^"<> ]+' ~/scenario/emails/06_malware_invoice.eml | sort -u
 ```
-![Всі URL у лист](image/email/image_4.png)
+![Всі URL у листі](image/email/image_4.png)
 
 **Tracking pixel:**
 ```bash
 grep -i "width.*[\"']1[\"'].*height\|height.*[\"']1[\"'].*width\|pixel\|track" \
     ~/scenario/emails/06_malware_invoice.eml
 ```
-
 
 **Приховані посилання (href ≠ текст):**
 ```bash
@@ -274,7 +275,6 @@ PYEOF
 ```
 ![Офлайн — Python скрипт](image/email/image_9.png)
 
-
 ### 3.4 Офлайн — emlAnalyzer (Python CLI)
 
 ```bash
@@ -288,6 +288,7 @@ eml_analyzer -i ~/scenario/emails/06_malware_invoice.eml
 eml_analyzer -i ~/scenario/emails/06_malware_invoice.eml --extract-attachment
 ```
 ![Офлайн — emlAnalyzer](image/email/image_10.png)
+
 ---
 
 ## Частина 4 — Завдання для звіту
