@@ -22,7 +22,7 @@
 
 | Пристрій | Інтерфейс | IPv4-адреса | Маска | Ім'я користувача | Пароль |
 |---|---|---|---|---|---|
-| analyst-workstation | eth0 | 192.168.X.X | /24 | analyst | analyst |
+| analyst-workstation | eth0 | 192.168.88.202 | /24 | analyst | analyst |
 | analyst-workstation | br-sc06_net | 172.22.0.1 | /24 | — | — |
 | forensics_sc06_invoice | eth0 (всередині контейнера) | 172.22.0.16 | /24 | root | — |
 | forensics_sc06_invoice | eth1 (c2_net) | 172.23.0.16 | /24 | root | — |
@@ -33,7 +33,7 @@
 
 Цей розділ описує спеціально підготовлений електронний лист, мережеві артефакти та журнали, необхідні для роботи лабораторної відповідно до навчального плану.
 
-* **Впровадження фішингового листа:** Файл `06_malware_invoice.eml` знаходиться на робочій станції аналітика за адресою `~/scenario/emails/06_malware_invoice.eml` та подається через веб-поштовий клієнт на `http://localhost:8086`. Заголовок `Authentication-Results` містить записи `spf=fail`, `dkim=fail` та `dmarc=fail`. Поле `Reply-To` вказує на `finance-dept@proton.me` (безкоштовний сервіс, а не корпоративний). Ланцюг `Received` містить підроблений хоп `from localhost (127.0.0.1)`. HTML-тіло містить кнопку, атрибут `href` якої веде на `cdn-updates-service.com`, тоді як відображуваний текст посилання показує `docs.google.com`. Піксель відстеження розміром 1×1 завантажується з `cdn-updates-service.com/track/pixel.gif`. Студент повинен самостійно відкрити веб-поштовий інтерфейс та проаналізувати необроблені заголовки, HTML-тіло і метадані вкладення для виявлення всіх IOC.
+* **Впровадження фішингового листа:** Файл `06_malware_invoice.eml` знаходиться на робочій станції аналітика за адресою `~/scenario/emails/06_malware_invoice.eml` та подається через веб-поштовий клієнт на `http://localhost:8086` або `http://192.168.88.202:8086`. Заголовок `Authentication-Results` містить записи `spf=fail`, `dkim=fail` та `dmarc=fail`. Поле `Reply-To` вказує на `finance-dept@proton.me` (безкоштовний сервіс, а не корпоративний). Ланцюг `Received` містить підроблений хоп `from localhost (127.0.0.1)`. HTML-тіло містить кнопку, атрибут `href` якої веде на `cdn-updates-service.com`, тоді як відображуваний текст посилання показує `docs.google.com`. Піксель відстеження розміром 1×1 завантажується з `cdn-updates-service.com/track/pixel.gif`. Студент повинен самостійно відкрити веб-поштовий інтерфейс та проаналізувати необроблені заголовки, HTML-тіло і метадані вкладення для виявлення всіх IOC.
 
 * **Захоплення мережевого трафіку:** PCAP-файл генерується всередині контейнера `forensics_sc06_invoice` за адресою `/root/analysis/traffic.pcap` та копіюється на хост командою `sudo docker cp forensics_sc06_invoice:/root/analysis/traffic.pcap ~/scenario/sc06.pcap`. Файл містить 1241 пакет: легітимний корпоративний фоновий трафік (DNS, ICMP, NTP, HTTP, SMTP, SMB, TLS) з 08:00 до 11:30, після чого о 11:32 починається ланцюг атаки. DNS-запит до `cdn-updates-service.com` резолвиться в `185.156.72.11` о `11:32:30`. Два завантаження корисного навантаження відбуваються з User-Agent Microsoft Office (`get_payload.ps1`) та PowerShell (`svchost_helper.dll`). Вісім маякових POST-запитів до `185.156.72.11:8080` з інтервалом ~120 секунд використовують рядок User-Agent IE11 від небраузерного процесу — відбиток Emotet. Спроба ексфільтрації POST до `/cdn/telemetry/upload` повертає HTTP 403. Студент повинен самостійно використати `tcpdump` для аналізу та зіставлення мережевих IOC.
 
@@ -44,7 +44,8 @@
 ```
 analyst-workstation (Ubuntu 26)
 │
-│  http://localhost:8086
+│  http://localhost:8086 
+   http://192.168.88.202:8086
 │
 ├── Docker Network: sc06_net (172.22.0.0/24) [bridge]
 │   ├── forensics_sc06_invoice — 172.22.0.16 : 8080 → localhost:8086
