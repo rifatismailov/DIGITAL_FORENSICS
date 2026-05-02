@@ -1,4 +1,4 @@
-# Передісторія інциденту — Сценарій : Доставка шкідливого ПЗ через підроблений рахунок
+# Передісторія інциденту — Сценарій: Доставка шкідливого ПЗ через підроблений рахунок
 
 **Назва лабораторної:** Email Forensics — Доставка шкідливого ПЗ через підроблений рахунок
 **Модуль:** Аналіз електронної пошти / Аналіз інцидентів
@@ -113,14 +113,13 @@ C2:          185.156.72.11:8080 (8 з'єднань за 18 хвилин)
 
 | Артефакт | Розташування | Опис |
 |---|---|---|
-| Веб-поштовий клієнт | http://localhost:8086 | Фішинговий лист з автоматичним детектором IOC |
-|  | http://192.168.X.X:8086 | |
-| Електронний лист (.eml) | ~/scenario/emails/06_malware_invoice.eml | Необроблений лист для офлайн-аналізу |
-| PCAP | ~/scenario/sc06.pcap | 1241 пакет: легітимний трафік + атака |
-| Журнал антивірусу | /var/log/security/av_alerts.log | 124 рядки — хронологія інциденту |
-| Журнал PowerShell | /var/log/security/powershell_transcript.log | Транскрипт сесії PowerShell |
-| Журнал вебдоступу | /var/log/web/access.log | HTTP-трафік через проксі |
+| Веб-поштовий клієнт | `http://localhost:8086` або `http://192.168.X.X:8086` | Фішинговий лист з автоматичним детектором IOC |
+| Електронний лист (.eml) | `~/scenario/emails/06_malware_invoice.eml` | Необроблений лист для офлайн-аналізу |
+| PCAP | `~/scenario/sc06.pcap` | 1241 пакет: легітимний трафік + атака |
+| Журнал антивірусу | `/var/log/security/av_alerts.log` | 124 рядки — хронологія інциденту |
+| Журнал PowerShell | `/var/log/security/powershell_transcript.log` | Транскрипт сесії PowerShell |
+| Журнал вебдоступу | `/var/log/web/access.log` | HTTP-трафік через проксі |
 
 ---
 
-*Forensics |  Fake Invoice (Emotet-style XLSM Dropper)| EDUCATIONAL USE ONLY | Rifat Ismailov*
+*Forensics | Fake Invoice (Emotet-style XLSM Dropper) | EDUCATIONAL USE ONLY | Rifat Ismailov*
