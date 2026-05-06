@@ -278,14 +278,11 @@ PYEOF
 ### 3.4 Офлайн — emlAnalyzer (Python CLI)
 
 ```bash
-# Встановити
-pip3 install eml-analyzer --break-system-packages
-
 # Запустити
-eml_analyzer -i ~/scenario/emails/06_malware_invoice.eml
+emlAnalyzer -i ~/scenario/emails/06_malware_invoice.eml
 
 # Витягнути вкладення
-eml_analyzer -i ~/scenario/emails/06_malware_invoice.eml --extract-attachment
+emlAnalyzer -i ~/scenario/emails/06_malware_invoice.eml --extract-attachment
 ```
 ![Офлайн — emlAnalyzer](image/email/image_10.png)
 
