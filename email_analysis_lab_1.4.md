@@ -281,8 +281,23 @@ PYEOF
 # Запустити
 emlAnalyzer -i ~/scenario/emails/06_malware_invoice.eml
 
-# Витягнути вкладення
-emlAnalyzer -i ~/scenario/emails/06_malware_invoice.eml --extract-attachment
+# Структура листа
+emlAnalyzer -i ~/scenario/emails/06_malware_invoice.eml
+
+# Заголовки
+emlAnalyzer -i ~/scenario/emails/06_malware_invoice.eml --header
+
+# URL-посилання
+emlAnalyzer -i ~/scenario/emails/06_malware_invoice.eml -u
+
+# HTML тіло
+emlAnalyzer -i ~/scenario/emails/06_malware_invoice.eml --html
+
+# Витягнути всі вкладення
+emlAnalyzer -i ~/scenario/emails/06_malware_invoice.eml --extract-all
+
+# Конкретне вкладення (номер 1)
+emlAnalyzer -i ~/scenario/emails/06_malware_invoice.eml -ea 1
 ```
 ![Офлайн — emlAnalyzer](image/email/image_10.png)
 
