@@ -215,6 +215,8 @@ foreach ($Pattern in $Suspicious) {
 
 ## Фаза 3 — Автоматизований аналіз через SC_Macro_Forensics.ps1
 
+> 📄 Скрипт: [lab_scripts/SC_Macro_Forensics.ps1](../lab_scripts/SC_Macro_Forensics.ps1)
+
 ### Крок 3.1 — Запустити скрипт
 
 ```powershell
