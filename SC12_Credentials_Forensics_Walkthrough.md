@@ -240,6 +240,92 @@ Credential Manager зберігає артефакти автентифікац�
 
 ---
 
+## Автоматизація — PowerShell скрипт для SC12
+
+> 💡 **Для викладачів та просунутих студентів.** Якщо потрібно перевірити багато комп'ютерів одночасно — цей скрипт виконує всі кроки лаби автоматично і зберігає звіт у файл. Запускати від імені **Адміністратора**.
+
+```powershell
+# SC12_Credentials_Forensics.ps1
+# Запускати від імені Адміністратора
+
+$OutputDir = "C:\forensics_results\SC12"
+New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
+$Report = "$OutputDir\credentials_report.txt"
+
+function Write-Report { param($Text) $Text | Out-File $Report -Append -Encoding UTF8 }
+
+Write-Report ("=" * 55)
+Write-Report "АНАЛІЗ АРТЕФАКТІВ ОБЛІКОВИХ ДАНИХ — SC12"
+Write-Report "Дата:     $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+Write-Report "Система:  $env:COMPUTERNAME"
+Write-Report "Користувач: $env:USERNAME"
+Write-Report ("=" * 55)
+
+# --- 1. Credential Manager через cmdkey ---
+Write-Report "`n--- CREDENTIAL MANAGER (cmdkey /list) ---"
+cmdkey /list | Out-File $Report -Append -Encoding UTF8
+
+# --- 2. Файли артефактів ---
+Write-Report "`n--- ФАЙЛИ АРТЕФАКТІВ ---"
+@("$env:APPDATA\Microsoft\Credentials", "$env:LOCALAPPDATA\Microsoft\Credentials") | ForEach-Object {
+    Write-Report "`nПапка: $_"
+    if (Test-Path $_) {
+        $files = Get-ChildItem $_ -Force
+        if ($files) {
+            $files | ForEach-Object {
+                Write-Report "  Файл:     $($_.Name)"
+                Write-Report "  Розмір:   $($_.Length) байт"
+                Write-Report "  Створено: $($_.CreationTime)"
+                Write-Report "  Змінено:  $($_.LastWriteTime)"
+                Write-Report "  ---"
+            }
+        } else { Write-Report "  Файлів не знайдено" }
+    } else { Write-Report "  Папка не існує" }
+}
+
+# --- 3. Реєстр: Winlogon ---
+Write-Report "`n--- РЕЄСТР: WINLOGON ---"
+$wl = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" -ErrorAction SilentlyContinue
+Write-Report "DefaultUserName:  $($wl.DefaultUserName)"
+Write-Report "AutoAdminLogon:   $($wl.AutoAdminLogon)"
+if ($wl.DefaultPassword) {
+    Write-Report "!!! ЗНАХІДКА: DefaultPassword існує — пароль у відкритому тексті в реєстрі!"
+} else {
+    Write-Report "DefaultPassword:  не знайдено (норма)"
+}
+
+# --- 4. Реєстр: LSA ---
+Write-Report "`n--- РЕЄСТР: LSA ---"
+$lsa = Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -ErrorAction SilentlyContinue
+$level = $lsa.LmCompatibilityLevel
+$levelDesc = switch ($level) {
+    0 { "Слабкий — LM та NTLM" }
+    1 { "Слабкий — LM та NTLMv2" }
+    2 { "Середній — тільки NTLM" }
+    3 { "Рекомендований — тільки NTLMv2" }
+    4 { "Сильний — NTLMv2, відхиляти LM" }
+    5 { "Максимальний — тільки NTLMv2, відхиляти LM та NTLM" }
+    default { "Невідомо" }
+}
+Write-Report "LmCompatibilityLevel: $level — $levelDesc"
+
+# --- Підсумок ---
+Write-Report "`n--- ПІДСУМОК ---"
+Write-Report "Звіт збережено: $Report"
+
+Write-Host "`nГотово! Результати: $OutputDir" -ForegroundColor Green
+Invoke-Item $OutputDir
+```
+
+**Як запустити:**
+```powershell
+# У PowerShell від імені Адміністратора:
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\SC12_Credentials_Forensics.ps1
+```
+
+---
+
 ## Чеклист для самоперевірки
 
 ```

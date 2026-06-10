@@ -1,9 +1,9 @@
-# Лабораторна робота — Сценарій 13: Аналіз Windows Event Log
+# Лабораторна робота Сценарій 13: Аналіз Windows Event Log
 
 Назва лабораторної: Windows Event Log Forensics — Security Event Analysis
 Модуль: Цифрова криміналістика / Windows Artifacts
-Сценарій: 13 — Windows Event Log Analysis
-Формат: Self-Paced
+Сценарій: 13 Windows Event Log Analysis
+Формат: Self - Paced
 Версія документу: 1.0
 
 ---
@@ -55,7 +55,7 @@
 
 ---
 
-## Підготовка — Встановлення FullEventLogView
+## Підготовка Встановлення FullEventLogView
 
 Завантажити з офіційного сайту NirSoft:
 
@@ -67,13 +67,13 @@ https://www.nirsoft.net/utils/full_event_log_view.html
 
 ---
 
-## Фаза 1 — Аналіз через FullEventLogView
+## Фаза 1 Аналіз через FullEventLogView
 
-### Крок 1.1 — Відкрити FullEventLogView
+### Крок 1.1 Відкрити FullEventLogView
 
 Запусти `FullEventLogView.exe`. Програма завантажить всі журнали поточної системи.
 
-### Крок 1.2 — Фільтрація за Security журналом
+### Крок 1.2 Фільтрація за Security журналом
 
 ```
 Options → Advanced Options → Log Source → Security
@@ -84,7 +84,7 @@ Options → Advanced Options → Log Source → Security
 View → Use Custom Filter → Channel: Security
 ```
 
-### Крок 1.3 — Знайти події входу (Event ID 4624)
+### Крок 1.3 Знайти події входу (Event ID 4624)
 
 У полі фільтру встанови:
 ```
@@ -98,7 +98,7 @@ Event ID: 4624
 | | 4624 | | | |
 | | 4624 | | | |
 
-### Крок 1.4 — Знайти невдалі спроби входу (Event ID 4625)
+### Крок 1.4 Знайти невдалі спроби входу (Event ID 4625)
 
 ```
 Event ID: 4625
@@ -106,7 +106,7 @@ Event ID: 4625
 
 **Підозрілий патерн:** багато 4625 підряд = можлива brute force атака.
 
-### Крок 1.5 — Зберегти результати
+### Крок 1.5 Зберегти результати
 
 ```
 File → Save Selected Items → security_events.csv
@@ -114,15 +114,15 @@ File → Save Selected Items → security_events.csv
 
 ---
 
-## Фаза 2 — Аналіз через вбудований Event Viewer (Windows)
+## Фаза 2 Аналіз через вбудований Event Viewer (Windows)
 
-### Крок 2.1 — Відкрити Event Viewer
+### Крок 2.1 Відкрити Event Viewer
 
 ```
 Win+R → eventvwr.msc → Enter
 ```
 
-### Крок 2.2 — Створити Custom View для розслідування
+### Крок 2.2 Створити Custom View для розслідування
 
 ```
 Action → Create Custom View
@@ -132,7 +132,7 @@ Action → Create Custom View
     Event IDs: 4624,4625,4648,4688,4698,4720,7045
 ```
 
-### Крок 2.3 — Аналіз підозрілих подій
+### Крок 2.3 Аналіз підозрілих подій
 
 Для кожної підозрілої події запиши:
 
@@ -148,16 +148,16 @@ IP Address:   [якщо є]
 
 ---
 
-## Фаза 3 — Аналіз через PowerShell (Windows)
+## Фаза 3 Аналіз через PowerShell (Windows)
 
-### Крок 3.1 — Отримати останні події безпеки
+### Крок 3.1 Отримати останні події безпеки
 
 ```powershell
 # Останні 50 подій безпеки
-Get-EventLog -LogName Security -Newest 50 | Format-Table TimeGenerated, EventID, Message -AutoSize
+Get-WinEvent -LogName Security -MaxEvents 50 | Format-Table TimeCreated, Id, Message -AutoSize
 ```
 
-### Крок 3.2 — Знайти всі входи за останні 24 години
+### Крок 3.2 Знайти всі входи за останні 24 години
 
 ```powershell
 $startTime = (Get-Date).AddHours(-24)
@@ -173,7 +173,7 @@ Get-WinEvent -FilterHashtable @{
     Format-Table -AutoSize
 ```
 
-### Крок 3.3 — Знайти невдалі спроби входу
+### Крок 3.3 Знайти невдалі спроби входу
 
 ```powershell
 Get-WinEvent -FilterHashtable @{
@@ -185,7 +185,7 @@ Get-WinEvent -FilterHashtable @{
     Format-Table -AutoSize
 ```
 
-### Крок 3.4 — Пошук підозрілих процесів (4688)
+### Крок 3.4 Пошук підозрілих процесів (4688)
 
 ```powershell
 Get-WinEvent -FilterHashtable @{
@@ -199,9 +199,9 @@ Get-WinEvent -FilterHashtable @{
 
 ---
 
-## Фаза 4 — Аналіз через wevtutil (командний рядок)
+## Фаза 4 Аналіз через wevtutil (командний рядок)
 
-### Крок 4.1 — Базові команди
+### Крок 4.1 Базові команди
 
 ```cmd
 rem Список журналів
@@ -214,7 +214,7 @@ rem Останні 10 подій з Security
 wevtutil qe Security /c:10 /rd:true /f:text
 ```
 
-### Крок 4.2 — Фільтрація за Event ID
+### Крок 4.2 Фільтрація за Event ID
 
 ```cmd
 rem Всі події 4624 (успішний вхід)
@@ -224,7 +224,7 @@ rem Всі події 4625 (невдалий вхід)
 wevtutil qe Security /q:"*[System[EventID=4625]]" /f:text /rd:true /c:20
 ```
 
-### Крок 4.3 — Експортувати журнал для аналізу
+### Крок 4.3 Експортувати журнал для аналізу
 
 ```cmd
 rem Зберегти Security журнал для офлайн аналізу
@@ -233,18 +233,54 @@ wevtutil epl Security C:\forensics_results\Security_backup.evtx
 
 ---
 
-## Фаза 5 — Аналіз на Linux (форензіка .evtx файлів)
+## Фаза 5 Аналіз .evtx файлів (офлайн форензіка)
 
-У реальному розслідуванні аналітик отримує `.evtx` файли з вилученого комп'ютера та аналізує їх на своїй Linux станції.
+У реальному розслідуванні аналітик отримує `.evtx` файли з вилученого комп'ютера та аналізує їх окремо — без запуску оригінальної системи.
 
-### Встановлення інструментів
+### Крок 5.1 Відкрити .evtx файл через Event Viewer (Windows)
 
-```bash
-sudo apt install python3-evtx -y
-pip3 install python-evtx --break-system-packages
+1. Відкрий **Event Viewer**: Win+R → `eventvwr.msc` → Enter
+2. У лівій панелі: **Action → Open Saved Log...**
+3. Вибери `.evtx` файл (наприклад `Security.evtx`)
+4. Журнал відкриється як звичайний — можна фільтрувати та аналізувати
+
+### Крок 5.2 Відкрити .evtx файл через FullEventLogView (Windows)
+
+1. Запусти `FullEventLogView.exe`
+2. **Options → Advanced Options → Log Source → Load events from external folder/file**
+3. Вкажи шлях до `.evtx` файлу
+4. Застосуй фільтри за Event ID як у Фазі 1
+
+### Крок 5.3 Експортувати події у CSV для аналізу (Windows)
+
+```powershell
+# Завантажити події з файлу та зберегти в CSV
+Get-WinEvent -Path "C:\forensics_results\Security_backup.evtx" |
+    Where-Object { $_.Id -in 4624,4625,4688 } |
+    Select-Object TimeCreated, Id, Message |
+    Export-Csv "C:\forensics_results\offline_analysis.csv" -Encoding UTF8
+
+Write-Host "Готово — відкрий файл у Excel для аналізу"
 ```
 
-### Аналіз .evtx файлу
+> Це дозволяє аналізувати журнали з **будь-якого** комп'ютера — навіть вимкненого чи скомпрометованого.
+
+---
+
+### Додатково — Аналіз на Linux (для просунутих)
+
+> 📌 **Опціонально** — виконується якщо є доступ до Linux станції. У реальному SOC аналітики часто використовують Linux для автоматизованого парсингу великої кількості .evtx файлів.
+
+#### Встановлення інструментів
+
+```bash
+# Створити віртуальне середовище (безпечний спосіб)
+python3 -m venv evtx-env
+source evtx-env/bin/activate
+pip install python-evtx
+```
+
+#### Аналіз .evtx файлу
 
 ```bash
 # Конвертувати evtx в XML
@@ -262,7 +298,7 @@ grep "<EventID>" Security.xml | sort | uniq -c | sort -rn | head -20
 
 ---
 
-## Фаза 6 — Практичний сценарій розслідування
+## Фаза 6 Практичний сценарій розслідування
 
 ### Сценарій: Виявлення підозрілої активності
 
@@ -287,7 +323,7 @@ grep "<EventID>" Security.xml | sort | uniq -c | sort -rn | head -20
 
 ---
 
-## Фаза 7 — Збереження результатів
+## Фаза 7 Збереження результатів
 
 ```powershell
 New-Item -ItemType Directory -Path C:\forensics_results -Force
@@ -344,6 +380,137 @@ Event Log є критичним артефактом для розслідува
 
 ---
 
+## Автоматизація — PowerShell скрипт для SC13
+
+> 💡 **Для викладачів та просунутих студентів.** Скрипт автоматично виконує всі кроки лаби: збирає події, виявляє підозрілі патерни (brute force, нічні входи, RDP), зберігає CSV файли та текстовий звіт. Корисно при перевірці **багатьох ПК** одночасно. Запускати від імені **Адміністратора**.
+
+```powershell
+# SC13_EventLog_Forensics.ps1
+# Запускати від імені Адміністратора
+
+$OutputDir = "C:\forensics_results\SC13"
+New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
+$Report = "$OutputDir\eventlog_report.txt"
+
+function Write-Report { param($Text) $Text | Out-File $Report -Append -Encoding UTF8 }
+
+Write-Report ("=" * 55)
+Write-Report "АНАЛІЗ WINDOWS EVENT LOG — SC13"
+Write-Report "Дата:     $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+Write-Report "Система:  $env:COMPUTERNAME"
+Write-Report ("=" * 55)
+
+# --- 1. Успішні входи 4624 ---
+Write-Report "`n--- УСПІШНІ ВХОДИ (4624) ---"
+$logins = Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4624} -MaxEvents 100 -ErrorAction SilentlyContinue
+Write-Report "Знайдено: $($logins.Count) записів (останні 100)"
+if ($logins) {
+    $logins | Select-Object TimeCreated,
+        @{N='Account';E={$_.Properties[5].Value}},
+        @{N='LogonType';E={$_.Properties[8].Value}},
+        @{N='WorkStation';E={$_.Properties[11].Value}},
+        @{N='IP';E={$_.Properties[18].Value}} |
+        Export-Csv "$OutputDir\logons_4624.csv" -Encoding UTF8 -NoTypeInformation
+    Write-Report "CSV збережено: logons_4624.csv"
+}
+
+# --- 2. Невдалі входи 4625 ---
+Write-Report "`n--- НЕВДАЛІ ВХОДИ (4625) ---"
+$failed = Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4625} -MaxEvents 200 -ErrorAction SilentlyContinue
+Write-Report "Знайдено: $($failed.Count) записів"
+if ($failed) {
+    $failed | Select-Object TimeCreated,
+        @{N='Account';E={$_.Properties[5].Value}},
+        @{N='FailureReason';E={$_.Properties[9].Value}} |
+        Export-Csv "$OutputDir\failed_logons_4625.csv" -Encoding UTF8 -NoTypeInformation
+    Write-Report "CSV збережено: failed_logons_4625.csv"
+}
+
+# --- 3. Виявлення Brute Force ---
+Write-Report "`n--- ВИЯВЛЕННЯ BRUTE FORCE ---"
+if ($failed) {
+    $clusters = $failed | Group-Object { $_.TimeCreated.ToString("yyyy-MM-dd HH:mm") } |
+        Where-Object { $_.Count -ge 3 }
+    if ($clusters) {
+        Write-Report "!!! ПІДОЗРІЛО: Виявлено кластери невдалих входів:"
+        $clusters | ForEach-Object { Write-Report "  $($_.Name) — $($_.Count) спроб за 1 хвилину" }
+    } else {
+        Write-Report "Brute force патернів не виявлено"
+    }
+}
+
+# --- 4. Нічні входи (00:00–06:00) ---
+Write-Report "`n--- НІЧНІ ВХОДИ (00:00-06:00) ---"
+if ($logins) {
+    $night = $logins | Where-Object { $_.TimeCreated.Hour -ge 0 -and $_.TimeCreated.Hour -lt 6 }
+    if ($night) {
+        Write-Report "!!! ПІДОЗРІЛО: Виявлено $($night.Count) нічних входів:"
+        $night | ForEach-Object {
+            Write-Report "  $($_.TimeCreated)  Акаунт: $($_.Properties[5].Value)"
+        }
+    } else { Write-Report "Нічних входів не виявлено" }
+}
+
+# --- 5. RDP входи (LogonType=10) ---
+Write-Report "`n--- RDP ВХОДИ (LogonType=10) ---"
+if ($logins) {
+    $rdp = $logins | Where-Object { $_.Properties[8].Value -eq 10 }
+    Write-Report "Знайдено RDP входів: $($rdp.Count)"
+    $rdp | ForEach-Object {
+        Write-Report "  $($_.TimeCreated)  Акаунт: $($_.Properties[5].Value)  IP: $($_.Properties[18].Value)"
+    }
+}
+
+# --- 6. Нові процеси 4688 ---
+Write-Report "`n--- НОВІ ПРОЦЕСИ (4688) ---"
+$procs = Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4688} -MaxEvents 50 -ErrorAction SilentlyContinue
+Write-Report "Знайдено: $($procs.Count) записів (останні 50)"
+if ($procs) {
+    $procs | Select-Object TimeCreated,
+        @{N='Process';E={$_.Properties[5].Value}},
+        @{N='ParentProcess';E={$_.Properties[13].Value}} |
+        Export-Csv "$OutputDir\processes_4688.csv" -Encoding UTF8 -NoTypeInformation
+    Write-Report "CSV збережено: processes_4688.csv"
+}
+
+# --- 7. Scheduled Tasks 4698 ---
+Write-Report "`n--- НОВІ SCHEDULED TASKS (4698) ---"
+$tasks = Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4698} -ErrorAction SilentlyContinue
+if ($tasks) {
+    Write-Report "!!! Знайдено $($tasks.Count) нових scheduled task(s) — перевір на закріплення зловмисника!"
+    $tasks | ForEach-Object { Write-Report "  $($_.TimeCreated)  $($_.Message.Substring(0,[Math]::Min(120,$_.Message.Length)))" }
+} else { Write-Report "Нових scheduled tasks не виявлено" }
+
+# --- 8. Нові облікові записи 4720 ---
+Write-Report "`n--- НОВІ ОБЛІКОВІ ЗАПИСИ (4720) ---"
+$accounts = Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4720} -ErrorAction SilentlyContinue
+if ($accounts) {
+    Write-Report "!!! Знайдено $($accounts.Count) нових облікових записів — можливий backdoor user!"
+    $accounts | ForEach-Object { Write-Report "  $($_.TimeCreated)  $($_.Properties[0].Value)" }
+} else { Write-Report "Нових облікових записів не виявлено" }
+
+# --- Підсумок ---
+Write-Report "`n--- ПІДСУМОК ---"
+Write-Report "4624 (успішні входи):   $($logins.Count)"
+Write-Report "4625 (невдалі входи):   $($failed.Count)"
+Write-Report "4688 (нові процеси):    $($procs.Count)"
+Write-Report "4698 (scheduled tasks): $($tasks.Count)"
+Write-Report "4720 (нові акаунти):    $($accounts.Count)"
+Write-Report "Звіт збережено: $Report"
+
+Write-Host "`nГотово! Результати: $OutputDir" -ForegroundColor Green
+Invoke-Item $OutputDir
+```
+
+**Як запустити:**
+```powershell
+# У PowerShell від імені Адміністратора:
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\SC13_EventLog_Forensics.ps1
+```
+
+---
+
 ## Чеклист для самоперевірки
 
 ```
@@ -353,6 +520,8 @@ Event Log є критичним артефактом для розслідува
 [ ] Event ID 4625 знайдено та проаналізовано
 [ ] PowerShell запити виконано
 [ ] wevtutil команди виконано
+[ ] Офлайн .evtx файл відкрито через Event Viewer або FullEventLogView
+[ ] CSV експорт через PowerShell виконано
 [ ] Таблиця ключових Event ID заповнена
 [ ] Практичний сценарій виконано
 [ ] Результати збережено в CSV
