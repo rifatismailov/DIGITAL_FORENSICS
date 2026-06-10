@@ -1,1 +1,6 @@
+# Mandiant remediation scripts — оригінали, не для публічного репо
+scripts/
+
+# macOS
 .DS_Store
+**/.DS_Store
