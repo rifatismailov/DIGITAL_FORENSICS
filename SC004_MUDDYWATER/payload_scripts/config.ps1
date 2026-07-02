@@ -1,7 +1,7 @@
 ﻿# =============================================================================
 # config.ps1 — Спільна конфігурація для всіх блоків
 # Dot-source на початку кожного блоку: . "$PSScriptRoot\config.ps1"
-# EXERCISE ONLY — CyberRanges blue team training
+# EXERCISE ONLY — Blue Team Training
 # =============================================================================
 
 $ErrorActionPreference = "SilentlyContinue"

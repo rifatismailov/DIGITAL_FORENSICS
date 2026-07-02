@@ -2,7 +2,7 @@
 # =============================================================================
 # c2_http_server.py — HTTP сервер для доставки implant.zip
 # Запускати на 172.16.50.10 (NS1)
-# EXERCISE ONLY — CyberRanges blue team training
+# EXERCISE ONLY — Blue Team Training
 # =============================================================================
 # Запуск:
 #   sudo python3 c2_http_server.py

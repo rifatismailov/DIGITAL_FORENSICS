@@ -1,5 +1,5 @@
 # SC-004 MUDDYWATER — Звіт про атаку
-## CyberRanges Blue Team Training | SET University
+## Blue Team Training
 ### EXERCISE ONLY — заборонено використовувати поза навчальним середовищем
 
 ---
@@ -310,4 +310,4 @@ t+3:09  B1:ALL:DONE — атака завершена
 ---
 
 *Звіт підготовлено для навчального сценарію SC-004 MUDDYWATER*  
-*SET University CyberRanges Blue Team Training*
+*Blue Team Training*

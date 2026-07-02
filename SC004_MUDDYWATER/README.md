@@ -1,7 +1,7 @@
 # SC-004 MUDDYWATER — Blue Team Training Lab
 
 **Scenario ID:** SC-004  
-**Platform:** CyberRanges (SET University)  
+
 **Classification:** EXERCISE ONLY — Do not use outside training environment  
 
 ---
@@ -600,5 +600,5 @@ rm -f ~/received/exfil_*.zip
 
 ---
 
-*SC-004 MUDDYWATER — SET University CyberRanges Blue Team Training*  
+*SC-004 MUDDYWATER — Blue Team Training*  
 *EXERCISE ONLY — For authorized training use only*

@@ -1,6 +1,6 @@
 ﻿# =============================================================================
 # Block 2: Discovery & Credential Harvesting для навчання заборонено використовувати в оц
-# EXERCISE ONLY — CyberRanges blue team training
+# EXERCISE ONLY — Blue Team Training
 # =============================================================================
 # Що робить:
 #   1. Збирає інфо про систему (whoami, hostname, ipconfig, net user)

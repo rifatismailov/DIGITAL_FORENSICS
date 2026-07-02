@@ -1,7 +1,7 @@
 ﻿# =============================================================================
 #  Block 7: File Server Macro Injection
 #  для навчання — заборонено використовувати поза навчальним середовищем
-#  EXERCISE ONLY — CyberRanges blue team training
+#  EXERCISE ONLY — Blue Team Training
 # =============================================================================
 # Що робить:
 #   1. Знаходить mapped shares через net use + registry

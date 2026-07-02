@@ -1,5 +1,5 @@
 # SC-004 MUDDYWATER — Windows Attack Chain Report
-## CyberRanges Blue Team Training | SET University
+## Blue Team Training
 ### EXERCISE ONLY — заборонено використовувати поза навчальним середовищем
 
 ---
@@ -382,5 +382,5 @@ DNS запит: <seq>.<hex_chunk>.exfil.updates-gov.net
 ---
 
 *Звіт підготовлено для навчального сценарію SC-004 MUDDYWATER*
-*SET University CyberRanges Blue Team Training*
+*Blue Team Training*
 *Код реалізації: block1_persist.ps1 → block7_fileserver.ps1*
