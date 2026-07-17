@@ -50,15 +50,16 @@ if (Test-Path $PERSIST_DIR) {
 
 $startup_allusers = "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp"
 $startup_user     = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup"
+$startup_kjohnson = "C:\Users\k.johnson\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
 
 $startup_files = @(
-    "implant.ps1",
+    "implant.bat","implant.ps1",
     "block1_persist.ps1","block2_discovery.ps1","block3_scan.ps1",
     "block4_staging.ps1","block5_exfil.ps1","block6_lateral.ps1",
     "block7_fileserver.ps1","config.ps1","WinSecUpdate.bat"
 )
 
-foreach ($startup in @($startup_allusers, $startup_user)) {
+foreach ($startup in @($startup_allusers, $startup_user, $startup_kjohnson)) {
     $startup_files | ForEach-Object {
         $f = Join-Path $startup $_
         if (Test-Path $f) {
@@ -121,15 +122,33 @@ Remove-Item "$env:TEMP\implant.rar"      -Force -ErrorAction SilentlyContinue
 Remove-Item "$env:TEMP\implant_drop.rar" -Force -ErrorAction SilentlyContinue
 Remove-Item "$env:TEMP\implant_drop"     -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item "$env:TEMP\wupd"             -Recurse -Force -ErrorAction SilentlyContinue
-Write-Host "  Cleaned: implant temp files" -ForegroundColor DarkGray
+Remove-Item "$env:TEMP\impl.ps1"         -Force -ErrorAction SilentlyContinue
 
-# ── File share артефакти (тільки якщо шара доступна) ─────────────────────────
+# k.johnson temp (якщо reset запускається від rangeadmin)
+$kj_temp = "C:\Users\k.johnson\AppData\Local\Temp"
+Remove-Item "$kj_temp\implant.rar" -Force   -ErrorAction SilentlyContinue
+Remove-Item "$kj_temp\impl.ps1"    -Force   -ErrorAction SilentlyContinue
+Remove-Item "$kj_temp\wupd"        -Recurse -Force -ErrorAction SilentlyContinue
+Write-Host "  Cleaned: implant temp files (current user + k.johnson)" -ForegroundColor DarkGray
 
-$share = "\\FILES.gov.local\public_folder"
-if (Test-Path $share) {
-    Remove-Item "$share\.winsec"                   -Force -ErrorAction SilentlyContinue
-    Remove-Item "$share\WindowsSecurityUpdate.vbs" -Force -ErrorAction SilentlyContinue
-    Write-Host "  Cleaned: file share artifacts" -ForegroundColor DarkGray
+# ── Remote WS-2: wsu.lock + Startup (через SMB якщо доступний) ───────────────
+
+$ws2_targets = @("192.168.210.102")
+foreach ($ws2 in $ws2_targets) {
+    $ws2_lock    = "\\$ws2\C$\Windows\Temp\wsu.lock"
+    $ws2_startup = "\\$ws2\C$\Users\e.brown\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
+    $ws2_all_startup = "\\$ws2\C$\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp"
+
+    if (Test-Path "\\$ws2\C$\Windows\Temp") {
+        Remove-Item $ws2_lock -Force -ErrorAction SilentlyContinue
+        $startup_files | ForEach-Object {
+            Remove-Item "$ws2_startup\$_"     -Force -ErrorAction SilentlyContinue
+            Remove-Item "$ws2_all_startup\$_" -Force -ErrorAction SilentlyContinue
+        }
+        Write-Host "  Cleaned WS-2 ($ws2): wsu.lock + Startup" -ForegroundColor DarkGray
+    } else {
+        Write-Host "  WS-2 ($ws2) недоступний по SMB — чисти вручну" -ForegroundColor Yellow
+    }
 }
 
 # ── Підсумок ──────────────────────────────────────────────────────────────────
