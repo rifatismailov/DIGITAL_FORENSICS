@@ -11,12 +11,8 @@ echo "=== SC004 NS1 INIT START ==="
 
 # Install python3 + dnslib
 apk add --no-cache python3 py3-pip py3-dnslib 2>/dev/null
-# fallback: pip if apk package not available
-python3 -c "import dnslib" 2>/dev/null || {
-    pip3 install dnslib 2>/dev/null || \
-    python3 -m pip install dnslib --break-system-packages 2>/dev/null || \
-    python3 -m pip install dnslib
-}
+python3 -c "import dnslib" 2>/dev/null || \
+    python3 -m pip install dnslib --break-system-packages
 python3 -c "import dnslib" && echo "dnslib: OK" || echo "ERROR: dnslib install failed!"
 
 # Create directories
