@@ -34,15 +34,22 @@ Get-ChildItem "C:\ProgramData\WinUpd_*.zip" -ErrorAction SilentlyContinue | ForE
     Write-Host "  Deleted: $($_.FullName)" -ForegroundColor DarkGray
 }
 
-# ── Persistent копія скриптів ─────────────────────────────────────────────────
+# ── Persistent копія скриптів (current user + k.johnson + e.brown) ───────────
 
-if (Test-Path $PERSIST_DIR) {
-    try {
-        [System.IO.Directory]::Delete($PERSIST_DIR, $true)
-        Write-Host "  Deleted: $PERSIST_DIR" -ForegroundColor DarkGray
-    } catch {
-        cmd /c "rmdir /s /q `"$PERSIST_DIR`""
-        Write-Host "  Deleted (fallback): $PERSIST_DIR" -ForegroundColor DarkGray
+$persist_dirs = @(
+    $PERSIST_DIR,
+    "C:\Users\k.johnson\AppData\Roaming\Microsoft\WinUpd",
+    "C:\Users\e.brown\AppData\Roaming\Microsoft\WinUpd"
+)
+foreach ($dir in $persist_dirs) {
+    if (Test-Path $dir) {
+        try {
+            [System.IO.Directory]::Delete($dir, $true)
+            Write-Host "  Deleted: $dir" -ForegroundColor DarkGray
+        } catch {
+            cmd /c "rmdir /s /q `"$dir`""
+            Write-Host "  Deleted (fallback): $dir" -ForegroundColor DarkGray
+        }
     }
 }
 
@@ -98,14 +105,51 @@ if (-not $KeepPersistence) {
         }
     }
 
-    # Registry Run keys (HKCU + HKLM)
+    # Registry Run keys (HKCU current user + HKLM)
     $reg_hkcu = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
     $reg_hklm = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
-    @("SecurityHealthUpdater", "WinUpdateSvc", "WinSecUpdate") | ForEach-Object {
+    $run_names = @("SecurityHealthUpdater", "WinUpdateSvc", "WinSecUpdate")
+    $run_names | ForEach-Object {
         foreach ($reg in @($reg_hkcu, $reg_hklm)) {
             if (Get-ItemProperty $reg -Name $_ -ErrorAction SilentlyContinue) {
                 Remove-ItemProperty $reg -Name $_ -Force -ErrorAction SilentlyContinue
                 Write-Host "  Deleted RunKey [$($reg -replace '.*\\Run','')]: $_" -ForegroundColor DarkGray
+            }
+        }
+    }
+
+    # Registry Run keys under k.johnson and e.brown (load hive if user not logged in)
+    foreach ($otherUser in @("k.johnson", "e.brown")) {
+        $ntuser = "C:\Users\$otherUser\NTUSER.DAT"
+        $hiveKey = "HKU\reset_$otherUser"
+        $hivePS  = "Registry::HKU\reset_$otherUser"
+        $loaded  = $false
+
+        # Try loading the hive (only works if user is NOT currently logged in)
+        if (Test-Path $ntuser) {
+            $out = reg load $hiveKey $ntuser 2>&1
+            if ($LASTEXITCODE -eq 0) { $loaded = $true }
+        }
+
+        # If user IS logged in, their hive is already under HKU\<SID>
+        $sid = (Get-LocalUser -Name $otherUser -ErrorAction SilentlyContinue |
+                Select-Object -ExpandProperty SID).Value
+        if (-not $loaded -and $sid -and (Test-Path "Registry::HKU\$sid")) {
+            $hivePS = "Registry::HKU\$sid"
+            $loaded = $true
+        }
+
+        if ($loaded) {
+            $runPath = "$hivePS\Software\Microsoft\Windows\CurrentVersion\Run"
+            $run_names | ForEach-Object {
+                if (Get-ItemProperty $runPath -Name $_ -ErrorAction SilentlyContinue) {
+                    Remove-ItemProperty $runPath -Name $_ -Force -ErrorAction SilentlyContinue
+                    Write-Host "  Deleted RunKey [$otherUser HKCU]: $_" -ForegroundColor DarkGray
+                }
+            }
+            if ($hivePS -like "*reset_*") {
+                [gc]::Collect()
+                reg unload $hiveKey 2>&1 | Out-Null
             }
         }
     }
