@@ -43,8 +43,8 @@ def run(port, serve_dir):
     os.makedirs(serve_dir, exist_ok=True)
     os.chdir(serve_dir)
 
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("", port), LoggingHandler) as httpd:
+    socketserver.ThreadingTCPServer.allow_reuse_address = True
+    with socketserver.ThreadingTCPServer(("", port), LoggingHandler) as httpd:
         print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} [START] HTTP server on port {port}")
         print(f"Serving: {os.path.abspath('.')}")
         for f in ["implant.rar", "implant_drop.rar"]:
