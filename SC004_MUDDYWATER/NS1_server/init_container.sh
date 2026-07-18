@@ -1,7 +1,9 @@
 #!/bin/sh
 # SC004 MUDDYWATER — NS1 Alpine container init script
-# Copy to /attachments via CyberRanges, runs at container startup
+# Only 3 attachments needed: init_container.sh, implant_drop.rar, implant.rar
+# Python scripts are always pulled fresh from GitHub
 
+GITHUB="https://raw.githubusercontent.com/rifatismailov/DIGITAL_FORENSICS/main/SC004_MUDDYWATER/NS1_server"
 ATTACH="/attachments"
 ROOT="/root"
 SERVE="$ROOT/serve"
@@ -9,20 +11,27 @@ RECV="$ROOT/received"
 
 echo "=== SC004 NS1 INIT START ==="
 
-# Install python3 + dnslib
+# Install python3 + pip
 apk add --no-cache python3 py3-pip py3-dnslib 2>/dev/null
+
+# Install dnslib via pip if apk package not available
 python3 -c "import dnslib" 2>/dev/null || \
     python3 -m pip install dnslib --break-system-packages
+
 python3 -c "import dnslib" && echo "dnslib: OK" || echo "ERROR: dnslib install failed!"
 
 # Create directories
 mkdir -p "$SERVE" "$RECV"
 
-# Deploy files from attachments
-cp "$ATTACH/c2_http_server.py" "$ROOT/c2_http_server.py"
-cp "$ATTACH/c2_server.py"      "$ROOT/c2_server.py"
-cp "$ATTACH/implant_drop.rar"  "$SERVE/implant_drop.rar"
-cp "$ATTACH/implant.rar"       "$SERVE/implant.rar"
+# Download latest Python scripts from GitHub (always fresh)
+wget -q -O "$ROOT/c2_server.py"      "$GITHUB/c2_server.py"
+wget -q -O "$ROOT/c2_http_server.py" "$GITHUB/c2_http_server.py"
+echo "Scripts: downloaded from GitHub"
+
+# Copy RAR payloads from attachments
+cp "$ATTACH/implant_drop.rar" "$SERVE/implant_drop.rar"
+cp "$ATTACH/implant.rar"      "$SERVE/implant.rar"
+echo "Payloads: implant_drop.rar implant.rar → $SERVE"
 
 # Detect container IP
 MY_IP=$(ip addr show | grep 'inet ' | grep -v '127.0.0.1' | head -1 | awk '{print $2}' | cut -d/ -f1)
@@ -52,12 +61,12 @@ touch "$ROOT/c2.log" "$RECV/c2_server.log"
 nohup python3 "$ROOT/c2_http_server.py" --port 80 --dir "$SERVE/" \
     > "$ROOT/c2.log" 2>&1 &
 
-# Start DNS C2 (port 53) — --fake-ip ensures DNS responses point to this container
+# Start DNS C2 (port 53)
 nohup python3 "$ROOT/c2_server.py" --ip "$MY_IP" --port 53 --out "$RECV/" --fake-ip "$MY_IP" \
     >> "$RECV/c2_server.log" 2>&1 &
 
 echo "HTTP C2 : port 80  → $SERVE"
-echo "DNS  C2 : port 53  → $MY_IP"
+echo "DNS  C2 : port 53  → $MY_IP (fake-ip: $MY_IP)"
 echo "Logs    : $ROOT/c2.log | $RECV/c2_server.log"
 echo "=== SC004 NS1 READY ==="
 
