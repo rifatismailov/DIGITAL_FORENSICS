@@ -58,3 +58,6 @@ echo "HTTP C2 : port 80  → $SERVE"
 echo "DNS  C2 : port 53  → $MY_IP"
 echo "Logs    : $ROOT/c2.log | $RECV/c2_server.log"
 echo "=== SC004 NS1 READY ==="
+
+# Keep session alive and stream both logs
+tail -F "$ROOT/c2.log" "$RECV/c2_server.log"
