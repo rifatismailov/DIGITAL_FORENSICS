@@ -18,13 +18,25 @@ python3 -c "import dnslib" && echo "dnslib: OK" || echo "ERROR: dnslib install f
 # Create directories
 mkdir -p "$SERVE" "$RECV"
 
-# Copy all files from attachments
-cp "$ATTACH/c2_server_sc004.py"      "$ROOT/c2_server.py"
-cp "$ATTACH/c2_http_server_sc004.py" "$ROOT/c2_http_server.py"
-cp "$ATTACH/implant_drop.rar"        "$SERVE/implant_drop.rar"
-cp "$ATTACH/implant.rar"             "$SERVE/implant.rar"
-cp "$ATTACH/implant.ps1"             "$SERVE/implant.ps1"
-echo "Files copied from /attachments"
+# Copy all files from attachments — report each result
+copy_file() {
+    src="$1"; dst="$2"
+    if [ ! -f "$src" ]; then
+        echo "  [MISSING] $src"
+    elif cp "$src" "$dst" 2>/dev/null; then
+        echo "  [OK]      $src → $dst"
+    else
+        echo "  [FAILED]  $src → $dst"
+    fi
+}
+
+echo "--- Copying files ---"
+copy_file "$ATTACH/c2_server_sc004.py"      "$ROOT/c2_server.py"
+copy_file "$ATTACH/c2_http_server_sc004.py" "$ROOT/c2_http_server.py"
+copy_file "$ATTACH/implant_drop.rar"        "$SERVE/implant_drop.rar"
+copy_file "$ATTACH/implant.rar"             "$SERVE/implant.rar"
+copy_file "$ATTACH/implant.ps1"             "$SERVE/implant.ps1"
+echo "--- /attachments contents: $(find /attachments -maxdepth 1 -type f -exec basename {} \; | tr '\n' ' ') ---"
 
 # Detect container IP
 MY_IP=$(ip addr show | grep 'inet ' | grep -v '127.0.0.1' | head -1 | awk '{print $2}' | cut -d/ -f1)
