@@ -10,13 +10,9 @@ RECV="$ROOT/received"
 
 echo "=== SC004 NS1 INIT START ==="
 
-# Install python3 + pip
-apk add --no-cache python3 py3-pip py3-dnslib 2>/dev/null
-
-# Install dnslib via pip if apk package not available
-python3 -c "import dnslib" 2>/dev/null || \
-    python3 -m pip install dnslib --break-system-packages
-
+# Install python3 + pip (separate from dnslib to avoid apk failure)
+apk add --no-cache python3 py3-pip
+python3 -m pip install dnslib --break-system-packages
 python3 -c "import dnslib" && echo "dnslib: OK" || echo "ERROR: dnslib install failed!"
 
 # Create directories
@@ -25,8 +21,8 @@ mkdir -p "$SERVE" "$RECV"
 # Copy all files from attachments
 cp "$ATTACH/c2_server_sc004.py"      "$ROOT/c2_server.py"
 cp "$ATTACH/c2_http_server_sc004.py" "$ROOT/c2_http_server.py"
-cp "$ATTACH/implant_drop_sc004.rar"  "$SERVE/implant_drop.rar"
-cp "$ATTACH/implant_sc004.rar"       "$SERVE/implant.rar"
+cp "$ATTACH/implant_drop.rar"        "$SERVE/implant_drop.rar"
+cp "$ATTACH/implant.rar"             "$SERVE/implant.rar"
 echo "Files copied from /attachments"
 
 # Detect container IP
