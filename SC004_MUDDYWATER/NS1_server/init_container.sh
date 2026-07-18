@@ -10,8 +10,9 @@ RECV="$ROOT/received"
 echo "=== SC004 NS1 INIT START ==="
 
 # Install python3 + pip + dnslib
-apk add --no-cache python3 py3-pip > /dev/null 2>&1
-pip3 install --quiet dnslib 2>/dev/null
+apk add --no-cache python3 py3-pip
+python3 -m pip install dnslib --break-system-packages 2>/dev/null || \
+python3 -m pip install dnslib
 
 # Create directories
 mkdir -p "$SERVE" "$RECV"
