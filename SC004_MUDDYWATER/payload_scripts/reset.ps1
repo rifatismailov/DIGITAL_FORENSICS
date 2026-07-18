@@ -51,6 +51,7 @@ if (Test-Path $PERSIST_DIR) {
 $startup_allusers = "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp"
 $startup_user     = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup"
 $startup_kjohnson = "C:\Users\k.johnson\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
+$startup_ebrown   = "C:\Users\e.brown\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
 
 $startup_files = @(
     "implant.bat","implant.ps1",
@@ -59,7 +60,7 @@ $startup_files = @(
     "block7_fileserver.ps1","config.ps1","WinSecUpdate.bat"
 )
 
-foreach ($startup in @($startup_allusers, $startup_user, $startup_kjohnson)) {
+foreach ($startup in @($startup_allusers, $startup_user, $startup_kjohnson, $startup_ebrown)) {
     $startup_files | ForEach-Object {
         $f = Join-Path $startup $_
         if (Test-Path $f) {
@@ -124,17 +125,30 @@ Remove-Item "$env:TEMP\implant_drop"     -Recurse -Force -ErrorAction SilentlyCo
 Remove-Item "$env:TEMP\wupd"             -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item "$env:TEMP\impl.ps1"         -Force -ErrorAction SilentlyContinue
 
-# k.johnson temp (якщо reset запускається від rangeadmin)
+# k.johnson temp (WS-1)
 $kj_temp = "C:\Users\k.johnson\AppData\Local\Temp"
 Remove-Item "$kj_temp\implant.rar" -Force   -ErrorAction SilentlyContinue
 Remove-Item "$kj_temp\impl.ps1"    -Force   -ErrorAction SilentlyContinue
 Remove-Item "$kj_temp\wupd"        -Recurse -Force -ErrorAction SilentlyContinue
-Write-Host "  Cleaned: implant temp files (current user + k.johnson)" -ForegroundColor DarkGray
 
-# ── Remote WS-2: wsu.lock + Startup (через SMB якщо доступний) ───────────────
+# e.brown temp (WS-2)
+$eb_temp = "C:\Users\e.brown\AppData\Local\Temp"
+Remove-Item "$eb_temp\implant.rar" -Force   -ErrorAction SilentlyContinue
+Remove-Item "$eb_temp\impl.ps1"    -Force   -ErrorAction SilentlyContinue
+Remove-Item "$eb_temp\wupd"        -Recurse -Force -ErrorAction SilentlyContinue
+Write-Host "  Cleaned: implant temp files (current user + k.johnson + e.brown)" -ForegroundColor DarkGray
 
+# ── Remote WS-2: wsu.lock + Startup (через SMB якщо доступний, тільки якщо не на WS-2) ────
+
+$currentHost = $env:COMPUTERNAME
 $ws2_targets = @("192.168.210.102")
 foreach ($ws2 in $ws2_targets) {
+    # Skip remote cleanup if already running on WS-2
+    $ws2_hostname = try { [System.Net.Dns]::GetHostEntry($ws2).HostName.Split('.')[0] } catch { "" }
+    if ($currentHost -eq $ws2_hostname -or $currentHost -eq "WS-2") {
+        Write-Host "  Running ON WS-2 — skipping remote SMB cleanup" -ForegroundColor DarkGray
+        continue
+    }
     $ws2_lock    = "\\$ws2\C$\Windows\Temp\wsu.lock"
     $ws2_startup = "\\$ws2\C$\Users\e.brown\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
     $ws2_all_startup = "\\$ws2\C$\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp"
