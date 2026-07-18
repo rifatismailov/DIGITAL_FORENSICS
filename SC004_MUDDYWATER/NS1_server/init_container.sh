@@ -23,10 +23,10 @@ python3 -c "import dnslib" && echo "dnslib: OK" || echo "ERROR: dnslib install f
 mkdir -p "$SERVE" "$RECV"
 
 # Copy all files from attachments
-cp "$ATTACH/c2_server.py"      "$ROOT/c2_server.py"
-cp "$ATTACH/c2_http_server.py" "$ROOT/c2_http_server.py"
-cp "$ATTACH/implant_drop.rar"  "$SERVE/implant_drop.rar"
-cp "$ATTACH/implant.rar"       "$SERVE/implant.rar"
+cp "$ATTACH/c2_server_sc004.py"      "$ROOT/c2_server.py"
+cp "$ATTACH/c2_http_server_sc004.py" "$ROOT/c2_http_server.py"
+cp "$ATTACH/implant_drop_sc004.rar"  "$SERVE/implant_drop.rar"
+cp "$ATTACH/implant_sc004.rar"       "$SERVE/implant.rar"
 echo "Files copied from /attachments"
 
 # Detect container IP
