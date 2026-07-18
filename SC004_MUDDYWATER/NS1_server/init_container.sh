@@ -40,7 +40,7 @@ cat > "$ROOT/go_dns.sh" << EOF
 #!/bin/sh
 pkill -f c2_server.py 2>/dev/null
 sleep 1
-python3 /root/c2_server.py --ip $MY_IP --port 53 --out /root/received/
+python3 /root/c2_server.py --ip $MY_IP --port 53 --out /root/received/ --fake-ip $MY_IP
 EOF
 
 chmod +x "$ROOT/go_http.sh" "$ROOT/go_dns.sh"
@@ -52,8 +52,8 @@ touch "$ROOT/c2.log" "$RECV/c2_server.log"
 nohup python3 "$ROOT/c2_http_server.py" --port 80 --dir "$SERVE/" \
     > "$ROOT/c2.log" 2>&1 &
 
-# Start DNS C2 (port 53)
-nohup python3 "$ROOT/c2_server.py" --ip "$MY_IP" --port 53 --out "$RECV/" \
+# Start DNS C2 (port 53) — --fake-ip ensures DNS responses point to this container
+nohup python3 "$ROOT/c2_server.py" --ip "$MY_IP" --port 53 --out "$RECV/" --fake-ip "$MY_IP" \
     >> "$RECV/c2_server.log" 2>&1 &
 
 echo "HTTP C2 : port 80  → $SERVE"
