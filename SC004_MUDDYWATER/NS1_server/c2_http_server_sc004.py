@@ -33,6 +33,12 @@ class LoggingHandler(http.server.SimpleHTTPRequestHandler):
         with open("c2_http.log", "a") as f:
             f.write(line + "\n")
 
+    def handle_one_request(self):
+        try:
+            super().handle_one_request()
+        except ConnectionResetError:
+            pass  # client probe — TCP connect then immediate reset, not an error
+
     def do_GET(self):
         ts  = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         src = self.client_address[0]
