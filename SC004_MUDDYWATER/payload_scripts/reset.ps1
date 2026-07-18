@@ -60,19 +60,26 @@ $startup_files = @(
     "block7_fileserver.ps1","config.ps1","WinSecUpdate.bat"
 )
 
+# Grant admin access to other users' startup folders before deletion
+foreach ($otherStartup in @($startup_allusers, $startup_kjohnson, $startup_ebrown)) {
+    if (Test-Path $otherStartup) {
+        cmd /c "takeown /f `"$otherStartup`" /r /d y >nul 2>&1"
+        cmd /c "icacls `"$otherStartup`" /grant administrators:F /t >nul 2>&1"
+    }
+}
+
 foreach ($startup in @($startup_allusers, $startup_user, $startup_kjohnson, $startup_ebrown)) {
     $startup_files | ForEach-Object {
         $f = Join-Path $startup $_
         if (Test-Path $f) {
-            # All-Users Startup потребує elevation — пробуємо takeown якщо звичайний del не спрацює
-            cmd /c "del /f /q `"$f`"" 2>$null
+            Remove-Item $f -Force -ErrorAction SilentlyContinue
             if (Test-Path $f) {
-                cmd /c "takeown /f `"$f`" /a >nul 2>&1 && icacls `"$f`" /grant administrators:F >nul 2>&1 && del /f /q `"$f`"" 2>$null
+                cmd /c "del /f /q `"$f`"" 2>$null
             }
             if (-not (Test-Path $f)) {
                 Write-Host "  Deleted from Startup: $_" -ForegroundColor DarkGray
             } else {
-                Write-Host "  ACCESS DENIED (запусти reset.ps1 від імені адміністратора): $f" -ForegroundColor Red
+                Write-Host "  ACCESS DENIED (run reset.ps1 as Administrator): $f" -ForegroundColor Red
             }
         }
     }
