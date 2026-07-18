@@ -3,7 +3,6 @@
 # Only 3 attachments needed: init_container.sh, implant_drop.rar, implant.rar
 # Python scripts are always pulled fresh from GitHub
 
-GITHUB="https://raw.githubusercontent.com/rifatismailov/DIGITAL_FORENSICS/main/SC004_MUDDYWATER/NS1_server"
 ATTACH="/attachments"
 ROOT="/root"
 SERVE="$ROOT/serve"
@@ -23,15 +22,12 @@ python3 -c "import dnslib" && echo "dnslib: OK" || echo "ERROR: dnslib install f
 # Create directories
 mkdir -p "$SERVE" "$RECV"
 
-# Download latest Python scripts from GitHub (always fresh)
-wget -q -O "$ROOT/c2_server.py"      "$GITHUB/c2_server.py"
-wget -q -O "$ROOT/c2_http_server.py" "$GITHUB/c2_http_server.py"
-echo "Scripts: downloaded from GitHub"
-
-# Copy RAR payloads from attachments
-cp "$ATTACH/implant_drop.rar" "$SERVE/implant_drop.rar"
-cp "$ATTACH/implant.rar"      "$SERVE/implant.rar"
-echo "Payloads: implant_drop.rar implant.rar → $SERVE"
+# Copy all files from attachments
+cp "$ATTACH/c2_server.py"      "$ROOT/c2_server.py"
+cp "$ATTACH/c2_http_server.py" "$ROOT/c2_http_server.py"
+cp "$ATTACH/implant_drop.rar"  "$SERVE/implant_drop.rar"
+cp "$ATTACH/implant.rar"       "$SERVE/implant.rar"
+echo "Files copied from /attachments"
 
 # Detect container IP
 MY_IP=$(ip addr show | grep 'inet ' | grep -v '127.0.0.1' | head -1 | awk '{print $2}' | cut -d/ -f1)
