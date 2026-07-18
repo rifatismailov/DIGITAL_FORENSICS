@@ -23,6 +23,7 @@ cp "$ATTACH/c2_server_sc004.py"      "$ROOT/c2_server.py"
 cp "$ATTACH/c2_http_server_sc004.py" "$ROOT/c2_http_server.py"
 cp "$ATTACH/implant_drop.rar"        "$SERVE/implant_drop.rar"
 cp "$ATTACH/implant.rar"             "$SERVE/implant.rar"
+cp "$ATTACH/implant_sc004.ps1"       "$SERVE/implant.ps1"
 echo "Files copied from /attachments"
 
 # Detect container IP
