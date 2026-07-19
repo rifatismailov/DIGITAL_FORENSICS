@@ -11,6 +11,18 @@ $ErrorActionPreference = "SilentlyContinue"
 $LOG_DIR     = "C:\ProgramData\upd_logs"
 $PERSIST_DIR = "$env:APPDATA\Microsoft\WinUpd"
 
+# Читаємо e.brown credentials ДО видалення upd_logs (інакше файл буде вже стертий)
+$WS2_USER = "e.brown"
+$WS2_PASS = "W!lDc@T22"  # fallback — змінити якщо пароль інший
+$creds_csv = Get-ChildItem "$LOG_DIR\creds" -Filter "*.csv" -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($creds_csv) {
+    $cred_line = Get-Content $creds_csv.FullName |
+        Where-Object { $_ -notmatch "^user" -and $_ -match "e\.brown" } | Select-Object -First 1
+    if ($cred_line) {
+        $cp = $cred_line.Split(','); $WS2_USER = $cp[0].Trim(); $WS2_PASS = $cp[1].Trim()
+    }
+}
+
 Write-Host "`n=== RESET: очищення артефактів ===" -ForegroundColor Cyan
 
 # ── Видаляємо всю папку upd_logs цілком ──────────────────────────────────────
@@ -189,30 +201,82 @@ Remove-Item "$eb_temp\impl.ps1"    -Force   -ErrorAction SilentlyContinue
 Remove-Item "$eb_temp\wupd"        -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host "  Cleaned: implant temp files (current user + k.johnson + e.brown)" -ForegroundColor DarkGray
 
-# ── Remote WS-2: wsu.lock + Startup (через SMB якщо доступний, тільки якщо не на WS-2) ────
+# ── Remote WS-2: повне очищення через SMB з кредами e.brown ──────────────────
 
 $currentHost = $env:COMPUTERNAME
 $ws2_targets = @("192.168.210.102")
+
 foreach ($ws2 in $ws2_targets) {
-    # Skip remote cleanup if already running on WS-2
     $ws2_hostname = try { [System.Net.Dns]::GetHostEntry($ws2).HostName.Split('.')[0] } catch { "" }
     if ($currentHost -eq $ws2_hostname -or $currentHost -eq "WS-2") {
         Write-Host "  Running ON WS-2 — skipping remote SMB cleanup" -ForegroundColor DarkGray
         continue
     }
-    $ws2_lock    = "\\$ws2\C$\Windows\Temp\wsu.lock"
-    $ws2_startup = "\\$ws2\C$\Users\e.brown\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
-    $ws2_all_startup = "\\$ws2\C$\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp"
 
-    if (Test-Path "\\$ws2\C$\Windows\Temp") {
-        Remove-Item $ws2_lock -Force -ErrorAction SilentlyContinue
+    # Підключаємось до WS-2 з кредами (зчитані на початку скрипту)
+    $share = "\\$ws2\C$"
+    net use $share /delete 2>$null | Out-Null
+    $connected = $false
+
+    foreach ($fmt in @("GOV.LOCAL\$WS2_USER", "$ws2\$WS2_USER", $WS2_USER)) {
+        $r = net use $share /user:$fmt $WS2_PASS 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            $connected = $true
+            Write-Host "  WS-2 SMB: підключено як $fmt" -ForegroundColor DarkGray
+            break
+        }
+    }
+    if (-not $connected) {
+        $r = net use $share 2>&1
+        if ($LASTEXITCODE -eq 0) { $connected = $true }
+    }
+
+    if ($connected) {
+        # wsu.lock
+        Remove-Item "\\$ws2\C$\Windows\Temp\wsu.lock" -Force -ErrorAction SilentlyContinue
+
+        # Скрипти в Windows\Temp (block6 кладе сюди)
+        Get-ChildItem "\\$ws2\C$\Windows\Temp" -Filter "*.ps1" -ErrorAction SilentlyContinue |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+        Get-ChildItem "\\$ws2\C$\Windows\Temp" -Filter "*.bat" -ErrorAction SilentlyContinue |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+
+        # All-Users Startup
+        $ws2_all_startup = "\\$ws2\C$\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp"
         $startup_files | ForEach-Object {
-            Remove-Item "$ws2_startup\$_"     -Force -ErrorAction SilentlyContinue
             Remove-Item "$ws2_all_startup\$_" -Force -ErrorAction SilentlyContinue
         }
-        Write-Host "  Cleaned WS-2 ($ws2): wsu.lock + Startup" -ForegroundColor DarkGray
+
+        # Per-user Startup + WinUpd persist (всі профілі)
+        Get-ChildItem "\\$ws2\C$\Users" -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -notin @('Public','Default','Default User','All Users') } |
+            ForEach-Object {
+                $uname = $_.Name
+                $user_startup = "\\$ws2\C$\Users\$uname\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
+                $startup_files | ForEach-Object {
+                    Remove-Item "$user_startup\$_" -Force -ErrorAction SilentlyContinue
+                }
+                $winupd = "\\$ws2\C$\Users\$uname\AppData\Roaming\Microsoft\WinUpd"
+                if (Test-Path $winupd) {
+                    Remove-Item $winupd -Recurse -Force -ErrorAction SilentlyContinue
+                    Write-Host "  Deleted WS-2 WinUpd: $uname" -ForegroundColor DarkGray
+                }
+            }
+
+        # upd_logs (якщо block1 вже запускався на WS-2)
+        if (Test-Path "\\$ws2\C$\ProgramData\upd_logs") {
+            Remove-Item "\\$ws2\C$\ProgramData\upd_logs" -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Host "  Deleted WS-2 upd_logs" -ForegroundColor DarkGray
+        }
+
+        # ZIP staging
+        Get-ChildItem "\\$ws2\C$\ProgramData\WinUpd_*.zip" -ErrorAction SilentlyContinue |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+
+        Write-Host "  WS-2 ($ws2): повне очищення виконано" -ForegroundColor DarkGray
+        net use $share /delete 2>$null | Out-Null
     } else {
-        Write-Host "  WS-2 ($ws2) недоступний по SMB — чисти вручну" -ForegroundColor Yellow
+        Write-Host "  WS-2 ($ws2) недоступний по SMB — зайди на WS-2 і запусти reset.ps1 вручну" -ForegroundColor Yellow
     }
 }
 

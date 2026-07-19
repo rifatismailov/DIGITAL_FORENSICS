@@ -125,19 +125,69 @@ foreach ($label in $temp_users.Keys) {
 Write-Host "`n[Legacy Files]" -ForegroundColor Yellow
 Check-Path "$env:APPDATA\Microsoft\WindowsUpdate.ps1" "WindowsUpdate.ps1 (old persist)"
 
-# ── Remote WS-2 (SMB) ─────────────────────────────────────────────────────────
+# ── Remote WS-2 (SMB з кредами e.brown) ──────────────────────────────────────
 $currentHost = $env:COMPUTERNAME
 if ($currentHost -ne "WS-2") {
     Write-Host "`n[Remote WS-2 via SMB]" -ForegroundColor Yellow
     $ws2 = "192.168.210.102"
-    if (Test-Path "\\$ws2\C$\Windows\Temp") {
-        Check-Path "\\$ws2\C$\Windows\Temp\wsu.lock" "WS-2 wsu.lock"
-        $ws2_startup = "\\$ws2\C$\Users\e.brown\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
-        foreach ($f in $startup_files) {
-            Check-Path "$ws2_startup\$f" "WS-2 Startup\e.brown\$f"
+    $share = "\\$ws2\C$"
+
+    # Підключаємось з кредами (з файлу або fallback)
+    $wu = "e.brown"; $wp = "W!lDc@T22"
+    $creds_csv = Get-ChildItem "C:\ProgramData\upd_logs\creds" -Filter "*.csv" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($creds_csv) {
+        $cred_line = Get-Content $creds_csv.FullName |
+            Where-Object { $_ -notmatch "^user" -and $_ -match "e\.brown" } | Select-Object -First 1
+        if ($cred_line) { $cp = $cred_line.Split(','); $wu = $cp[0].Trim(); $wp = $cp[1].Trim() }
+    }
+    $ws2_connected = $false
+    net use $share /delete 2>$null | Out-Null
+    foreach ($fmt in @("GOV.LOCAL\$wu", "$ws2\$wu", $wu)) {
+        $r = net use $share /user:$fmt $wp 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            $ws2_connected = $true
+            Write-Host "  Connected to WS-2 as $fmt" -ForegroundColor DarkGray
+            break
         }
+    }
+
+    if ($ws2_connected) {
+        # wsu.lock
+        Check-Path "$share\Windows\Temp\wsu.lock" "WS-2 wsu.lock"
+
+        # Scripts in Windows\Temp
+        Get-ChildItem "$share\Windows\Temp" -Filter "*.ps1" -ErrorAction SilentlyContinue | ForEach-Object {
+            Write-Host "  [FOUND] WS-2 Windows\Temp\$($_.Name)" -ForegroundColor Red; $script:found++
+        }
+        Get-ChildItem "$share\Windows\Temp" -Filter "*.bat" -ErrorAction SilentlyContinue | ForEach-Object {
+            Write-Host "  [FOUND] WS-2 Windows\Temp\$($_.Name)" -ForegroundColor Red; $script:found++
+        }
+
+        # All-Users Startup
+        $ws2_all_startup = "$share\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp"
+        foreach ($f in $startup_files) {
+            Check-Path "$ws2_all_startup\$f" "WS-2 AllUsers Startup\$f"
+        }
+
+        # Per-user Startup + WinUpd (всі профілі)
+        Get-ChildItem "$share\Users" -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -notin @('Public','Default','Default User','All Users') } |
+            ForEach-Object {
+                $uname = $_.Name
+                $user_startup = "$share\Users\$uname\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
+                foreach ($f in $startup_files) {
+                    Check-Path "$user_startup\$f" "WS-2 Startup\$uname\$f"
+                }
+                Check-Path "$share\Users\$uname\AppData\Roaming\Microsoft\WinUpd" "WS-2 WinUpd\$uname"
+            }
+
+        # upd_logs (якщо block1 вже запускався на WS-2)
+        Check-Path "$share\ProgramData\upd_logs" "WS-2 upd_logs"
+
+        net use $share /delete 2>$null | Out-Null
     } else {
-        Write-Host "  WS-2 ($ws2) недоступний по SMB" -ForegroundColor DarkGray
+        Write-Host "  WS-2 ($ws2) недоступний або немає кредів" -ForegroundColor DarkGray
+        Write-Host "  (запусти check_artifacts.ps1 на WS-2 консолі для локальної перевірки)" -ForegroundColor DarkGray
     }
 }
 
