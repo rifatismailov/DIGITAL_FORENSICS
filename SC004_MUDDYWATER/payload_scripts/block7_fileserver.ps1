@@ -63,12 +63,26 @@ function Collect-FilesFromShare {
 function Get-MappedShares {
     $shares = [System.Collections.Generic.List[hashtable]]::new()
 
-    # Метод 1: net use
+    # Метод 1: net use — обробляємо і OK і Disconnected
     net use 2>&1 | ForEach-Object {
-        if ($_ -match 'OK\s+\S+\s+(\\\\[^\s]+)') {
-            $path = $Matches[1]
-            $shares.Add(@{ Path = $path; Source = "net_use" })
-            Write-Log "Share (net use): $path"
+        if ($_ -match '(OK|Disconnected)\s+([A-Z]:)?\s*(\\\\[^\s]+)') {
+            $status = $Matches[1]
+            $drive  = $Matches[2]   # напр. "Z:"
+            $unc    = $Matches[3]   # напр. "\\10.10.10.30\Finance"
+
+            # Disconnected — пробуємо перепідключити через літеру диска
+            if ($status -eq 'Disconnected' -and $drive) {
+                Write-Log "Share Disconnected: $drive ($unc) — reconnecting..."
+                net use $drive 2>$null | Out-Null
+            }
+
+            # Використовуємо літеру диска якщо доступна, інакше UNC
+            $path = if ($drive -and (Test-Path "${drive}\")) { $drive } else { $unc }
+
+            if (($shares | Where-Object { $_.Path -eq $path -or $_.Path -eq $unc }).Count -eq 0) {
+                $shares.Add(@{ Path = $path; Source = "net_use" })
+                Write-Log "Share (net use [$status]): $path"
+            }
         }
     }
 
