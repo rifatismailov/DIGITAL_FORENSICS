@@ -191,6 +191,53 @@ if ($currentHost -ne "WS-2") {
     }
 }
 
+# ── File Server (FILES-01): артефакти block7 ─────────────────────────────────
+Write-Host "`n[File Server / Block7]" -ForegroundColor Yellow
+
+$b7_shares = [System.Collections.Generic.List[string]]::new()
+net use 2>&1 | ForEach-Object {
+    if ($_ -match 'OK\s+\S+\s+(\\\\[^\s]+)') { $b7_shares.Add($Matches[1]) }
+}
+if (Test-Path "HKCU:\Network") {
+    Get-ChildItem "HKCU:\Network" -ErrorAction SilentlyContinue | ForEach-Object {
+        $remote = (Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue).RemotePath
+        if ($remote -and $b7_shares -notcontains $remote) { $b7_shares.Add($remote) }
+    }
+}
+
+if ($b7_shares.Count -eq 0) {
+    Write-Host "  [clean] Mapped shares not found" -ForegroundColor DarkGreen
+} else {
+    foreach ($share in $b7_shares) {
+        if (-not (Test-Path $share)) {
+            Write-Host "  [skip]  Share недоступна: $share" -ForegroundColor DarkGray
+            continue
+        }
+        Check-Path "$share\.winsec"                    "FileServer .winsec marker ($share)"
+        Check-Path "$share\WindowsSecurityUpdate.vbs"  "FileServer VBS fallback ($share)"
+        Get-ChildItem $share -Filter "*.docm" -ErrorAction SilentlyContinue | ForEach-Object {
+            Write-Host "  [FOUND] FileServer .docm: $($_.Name)" -ForegroundColor Red; $script:found++
+        }
+        Get-ChildItem $share -Filter "*.xlsm" -ErrorAction SilentlyContinue | ForEach-Object {
+            Write-Host "  [FOUND] FileServer .xlsm: $($_.Name)" -ForegroundColor Red; $script:found++
+        }
+    }
+}
+
+# AccessVBOM
+Get-ChildItem "HKCU:\Software\Microsoft\Office" -ErrorAction SilentlyContinue | ForEach-Object {
+    foreach ($app in @("Word", "Excel")) {
+        $path = "HKCU:\Software\Microsoft\Office\$($_.PSChildName)\$app\Security"
+        if (Test-Path $path) {
+            $val = (Get-ItemProperty $path -ErrorAction SilentlyContinue).AccessVBOM
+            if ($val -eq 1) {
+                Write-Host "  [FOUND] Office $app AccessVBOM=1 (version $($_.PSChildName))" -ForegroundColor Red
+                $script:found++
+            }
+        }
+    }
+}
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 Write-Host "`n=== Результат ===" -ForegroundColor Cyan
 if ($found -eq 0) {

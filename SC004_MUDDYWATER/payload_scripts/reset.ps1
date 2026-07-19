@@ -280,6 +280,49 @@ foreach ($ws2 in $ws2_targets) {
     }
 }
 
+# ── File Server (FILES-01): артефакти block7 ─────────────────────────────────
+
+# Знаходимо підключені шари (так само як B7)
+$b7_shares = [System.Collections.Generic.List[string]]::new()
+net use 2>&1 | ForEach-Object {
+    if ($_ -match 'OK\s+\S+\s+(\\\\[^\s]+)') { $b7_shares.Add($Matches[1]) }
+}
+if (Test-Path "HKCU:\Network") {
+    Get-ChildItem "HKCU:\Network" -ErrorAction SilentlyContinue | ForEach-Object {
+        $remote = (Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue).RemotePath
+        if ($remote -and $b7_shares -notcontains $remote) { $b7_shares.Add($remote) }
+    }
+}
+
+foreach ($share in $b7_shares) {
+    if (-not (Test-Path $share)) { continue }
+
+    # .winsec маркер
+    Remove-Item "$share\.winsec" -Force -ErrorAction SilentlyContinue
+
+    # Macro-injected файли
+    Get-ChildItem $share -Filter "*.docm" -ErrorAction SilentlyContinue |
+        Remove-Item -Force -ErrorAction SilentlyContinue
+    Get-ChildItem $share -Filter "*.xlsm" -ErrorAction SilentlyContinue |
+        Remove-Item -Force -ErrorAction SilentlyContinue
+
+    # VBS fallback
+    Remove-Item "$share\WindowsSecurityUpdate.vbs" -Force -ErrorAction SilentlyContinue
+
+    Write-Host "  Cleaned file server share: $share" -ForegroundColor DarkGray
+}
+
+# AccessVBOM Registry (block7 виставляє 1, повертаємо 0)
+Get-ChildItem "HKCU:\Software\Microsoft\Office" -ErrorAction SilentlyContinue | ForEach-Object {
+    foreach ($app in @("Word", "Excel")) {
+        $path = "HKCU:\Software\Microsoft\Office\$($_.PSChildName)\$app\Security"
+        if (Test-Path $path) {
+            Set-ItemProperty -Path $path -Name "AccessVBOM" -Value 0 -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+Write-Host "  Reset: Office AccessVBOM → 0" -ForegroundColor DarkGray
+
 # ── Підсумок ──────────────────────────────────────────────────────────────────
 
 Write-Host "`nГотово. Тепер можна запускати block1 знову." -ForegroundColor Green
